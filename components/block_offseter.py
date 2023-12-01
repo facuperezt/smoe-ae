@@ -1,6 +1,10 @@
 #%%
 import torch
 
+__all__ = [
+    'OffsetBlock'
+]
+
 class OffsetBlock(torch.nn.Module):
     def __init__(self, n_kernels: int = 4, block_size: int = 8, n_channels: int = 1, img_size: int = 512):
         """

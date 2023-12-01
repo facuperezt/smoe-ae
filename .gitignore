@@ -1,0 +1,165 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Mac specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs
+.idea/
+.vscode/
+
+# Compiled files
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+env.bak/
+
+# Logs
+*.log
+logs/
+
+# Build files
+build/
+dist/
+*.egg-info/
+
+# Cache files
+*.cache/
+.cache/
+
+# Database files
+*.db
+*.sqlite3
+db.sqlite3
+
+# Test coverage
+htmlcov/
+.coverage
+
+# Translations
+*.mo
+*.pot
+
+# Documentation
+docs/_build/
+
+# Compiled Python files
+*.pyc
+*.pyo
+
+# Package files
+*.egg
+*.egg-info/
+*.eggs/
+
+# Distribution / packaging
+*.bak
+*.swp
+*.lock
+*.bak
+*.swp
+*.tmp
+*.out
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.rar
+*.gz
+*.bz2
+*.7z
+*.xz
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.iso
+*.img
+*.whl
+
+# Ignore pipenv virtual environment
+/.venv
+
+# Ignore poetry virtual environment
+/.venv/
+.poetry/
+
+# Ignore PyCharm files
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# Ignore Visual Studio Code files
+.vscode/
+.settings/
+*.code-workspace
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore mypy cache
+.mypy_cache/
+
+# Ignore pytest cache
+.pytest_cache/
+
+# Ignore coverage reports
+.coverage
+htmlcov/
+
+# Ignore Sphinx documentation build
+docs/_build/
+
+# Ignore PyInstaller build
+dist/
+build/
+*.spec
+
+# Ignore pip cache
+pip-wheel-metadata/
+pip-compile-requirements.txt
+pip-compile-requirements.txt.*
+
+# Ignore poetry cache
+.poetry/
+.poetry.lock
+
+# Ignore pre-commit hooks
+.pre-commit-config.yaml
+.pre-commit-hooks.yaml
+.pre-commit-hooks.yml
+.pre-commit-hooks.json
+.pre-commit-hooks.cfg
+.pre-commit-hooks.toml
+.pre-commit-hooks.sh
+.pre-commit-hooks.ps1
+.pre-commit-hooks.bat
+.pre-commit-hooks.exe
+.pre-commit-hooks
+
+# Ignore tox virtual environment
+.tox/
+
+# Ignore pyenv virtual environment
+.python-version
+
+# Ignore pyright cache
+.pyright_cache/
+
+# Ignore pycache
+__pycache__/
+
+# Ignore training data
+data/train/
+data/valid/

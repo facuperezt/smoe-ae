@@ -2,6 +2,11 @@ import torch
 from autoencoder import MixedActivation
 from typing import Optional, Dict
 
+__all__ = [
+    'GlobalMeanOptimizer'
+]
+
+
 class GlobalMeanOptimizer(torch.nn.Module):
     def __init__(self, n_kernels: int = 4, block_size: int = 8, n_channels: int = 1, img_size: int = 512, network_architecture: Optional[Dict] = None):
         """ 
@@ -14,7 +19,8 @@ class GlobalMeanOptimizer(torch.nn.Module):
         self.img_size = img_size
 
         nr_smoe_params = 3*n_kernels + n_kernels**2
-        network_architecture = [2*nr_smoe_params, 2*nr_smoe_params, nr_smoe_params]
+        if network_architecture is None:
+            network_architecture = [2*nr_smoe_params, 2*nr_smoe_params, nr_smoe_params]
 
         ### Dense layers ###
         global_smoe_optimizer = []

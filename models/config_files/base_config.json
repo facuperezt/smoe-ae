@@ -1,0 +1,54 @@
+{
+    "img2block": {
+        "block_size": 16,
+        "img_size": 512
+    },
+
+    "ae": {
+        "n_kernels": 4,
+        "block_size": 16,
+        "img_size": 512,
+        "n_channels": 1,
+        "network_architecture": {
+            "conv": {
+                "channel_sizes": [32, 256, 512]
+            },
+            "lin": {
+                "feature_sizes": [256, 128]
+            },
+            "smoe": {
+                "feature_sizes": [64]
+            },
+            "combiner": {
+                "feature_sizes": [64]
+            }
+        }
+    },
+
+    "positional_encoding": {
+        "channels": 1
+    },
+    "global_mean_optimizer": {
+        "n_kernels": 4,
+        "block_size": 16,
+        "img_size": 512,
+        "n_channels": 1,
+            "network_architecture": null
+        },
+
+    "smoe": {
+        "n_kernels": 4,
+        "block_size": 16
+    },
+
+    "block2img": {
+        "block_size": 16,
+        "img_size": 512
+    },
+
+    "loss_function": {
+        "loss_type": "mse",
+        "alpha": 0.8,
+        "beta": 0.2
+    }
+}

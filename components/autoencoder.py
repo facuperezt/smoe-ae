@@ -3,6 +3,9 @@ import enum
 from typing import Optional, List, Union, Dict
 import torch
 
+__all__ = [
+    'TorchSMoE_AE'
+]
 
 _base_network_architecture = {
     "conv": {

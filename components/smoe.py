@@ -5,6 +5,10 @@ from typing import Union
 from utils import sliding_window
 
 
+__all__ = [
+    "TorchSMoE_SMoE",
+]
+
 class TorchSMoE_SMoE(torch.nn.Module):
     """
     SMoE implemented in PyTorch, which allows for the gradients to be calculated with autograd
