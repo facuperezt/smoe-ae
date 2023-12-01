@@ -47,7 +47,7 @@
     },
 
     "loss_function": {
-        "loss_type": "mse",
+        "loss_type": "l1_l2",
         "alpha": 0.8,
         "beta": 0.2
     }

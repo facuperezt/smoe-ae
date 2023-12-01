@@ -30,7 +30,7 @@ class PositionalEncoding1D(torch.nn.Module):
         self.register_buffer("inv_freq", inv_freq)
         self.register_buffer("cached_penc", None)
 
-    def forward(self, tensor):
+    def forward(self, tensor: torch.Tensor):
         """
         :param tensor: A 3d tensor of size (batch_size, x, ch)
         :return: Positional Encoding Matrix of size (batch_size, x, ch)
@@ -43,10 +43,10 @@ class PositionalEncoding1D(torch.nn.Module):
 
         self.cached_penc = None
         batch_size, x, orig_ch = tensor.shape
-        pos_x = torch.arange(x, device=tensor.device).type(self.inv_freq.type())
+        pos_x = torch.arange(x, device=tensor.device, dtype=self.inv_freq.dtype)
         sin_inp_x = torch.einsum("i,j->ij", pos_x, self.inv_freq)
         emb_x = get_emb(sin_inp_x)
-        emb = torch.zeros((x, self.channels), device=tensor.device).type(tensor.type())
+        emb = torch.zeros((x, self.channels), device=tensor.device, dtype=tensor.dtype)
         emb[:, : self.channels] = emb_x
 
         self.cached_penc = emb[None, :, :orig_ch].repeat(batch_size, 1, 1)
@@ -62,10 +62,34 @@ class PositionalEncodingPermute1D(torch.nn.Module):
         self.penc = PositionalEncoding1D(channels)
 
     def forward(self, tensor):
+        if len(tensor.shape) == 2:
+            tensor = tensor.unsqueeze(0)
         tensor = tensor.permute(0, 2, 1)
         enc = self.penc(tensor)
-        return enc.permute(0, 2, 1)
+        return enc.permute(0, 2, 1).squeeze()
 
     @property
     def org_channels(self):
         return self.penc.org_channels
+    
+
+class Summer(torch.nn.Module):
+    def __init__(self,penc):
+        """
+        :param model: The type of positional encoding to run the summer on.
+        """
+        super(Summer, self).__init__()
+        self.penc = penc
+
+    def forward(self, tensor):
+        """
+        :param tensor: A 3, 4 or 5d tensor that matches the model output size
+        :return: Positional Encoding Matrix summed to the original tensor
+        """
+        penc = self.penc(tensor)
+        assert (
+            tensor.size() == penc.size()
+        ), "The original tensor size  {} and the positional encoding tensor size {} must match!".format(
+            tensor.size(), penc.size()
+        )
+        return tensor + penc

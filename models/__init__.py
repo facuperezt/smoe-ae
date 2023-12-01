@@ -1,3 +1,3 @@
 import sys
 sys.path.append('..')
-from models import AserejePipeline
+from .asereje import AserejePipeline as Asereje

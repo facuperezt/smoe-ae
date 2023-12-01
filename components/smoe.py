@@ -29,7 +29,7 @@ class TorchSMoE_SMoE(torch.nn.Module):
 
         x = torch.linspace(0, 1, block_size, dtype=torch.float32)
         y = torch.linspace(0, 1, block_size, dtype=torch.float32)
-        domain_init = torch.tensor(np.array(np.meshgrid(x, y)).T.reshape([block_size ** 2, 2]), dtype=torch.float32)
+        domain_init = torch.tensor(np.array(np.meshgrid(x, y)).T.reshape([block_size ** 2, 2]), dtype=torch.float32, device=arr.device, requires_grad=True)
         center_x = arr[:, :kernel_num]
         center_y = arr[:, kernel_num:2 * kernel_num]
         A_NN = arr[:, 3 * kernel_num:].reshape([-1, kernel_num, 2, 2])

@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from models import AserejePipeline as Asereje
+from models import Asereje
 from data import DataLoader
+
+# torch.autograd.set_detect_anomaly(True)
 
 # Device configuration
 device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
@@ -12,11 +14,11 @@ train_loader = DataLoader()
 train_loader.initialize()
 
 # Define your model
-model = Asereje("models/config_files/basics.json", device=device)
+model = Asereje("models/config_files/base_config.json", device=device)
 model: nn.Module
 
 # Define your loss function
-criterion = Asereje.loss_function
+criterion = model.loss
 
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=0.001)
@@ -28,7 +30,10 @@ for epoch in range(num_epochs):
     model.train()
     
     # Iterate over the training dataset
-    for inputs, labels in train_loader:
+    for i, (inputs, labels) in enumerate(train_loader):
+        print(i)
+        inputs = inputs.to(device)
+        labels = labels.to(device)
         # Zero the gradients
         optimizer.zero_grad()
         

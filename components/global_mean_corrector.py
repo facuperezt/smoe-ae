@@ -1,5 +1,5 @@
 import torch
-from autoencoder import MixedActivation
+from .autoencoder import MixedActivation
 from typing import Optional, Dict
 
 __all__ = [
@@ -30,7 +30,7 @@ class GlobalMeanOptimizer(torch.nn.Module):
             ):
             global_smoe_optimizer.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
             global_smoe_optimizer.append(torch.nn.LeakyReLU())
-        global_smoe_optimizer.append(torch.nn.Linear(network_architecture[-1], [3*n_kernels + n_kernels**2], dtype=torch.float32))
+        global_smoe_optimizer.append(torch.nn.Linear(network_architecture[-1], 3*n_kernels + n_kernels**2, dtype=torch.float32))
         global_smoe_optimizer.append(MixedActivation())
 
         self.global_smoe_optimizer = torch.nn.Sequential(*global_smoe_optimizer)
@@ -39,7 +39,7 @@ class GlobalMeanOptimizer(torch.nn.Module):
         """
         Applies the forward pass of the GlobalMeanOptimizer model.
         """
-        x = x_comb + x_smoe
+        x = torch.cat([x_smoe, x_comb], dim=1)
         x = self.global_smoe_optimizer(x)
 
         return x

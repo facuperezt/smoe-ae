@@ -16,11 +16,12 @@ class BlockImgBlock(torch.nn.Module):
         self.img_size = img_size
         
     def img_to_blocks(self, img_input: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
-        return torch.tensor(sliding_window(np.asarray(img_input), 2*[self.block_size], 2*[self.block_size], False))
+        device = img_input.device
+        return torch.tensor(sliding_window(np.asarray(img_input.squeeze().cpu()), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, 1).to(device)
 
     def blocks_to_img(self, blocked_input: torch.Tensor) -> torch.Tensor:
         reshape_size = (int(self.img_size/self.block_size), int(self.img_size/self.block_size), self.block_size, self.block_size)
-        return blocked_input.reshape(reshape_size).permute(0, 2, 1, 3).reshape(self.img_size, self.img_size)
+        return blocked_input.reshape(reshape_size).permute(0, 2, 1, 3).reshape(1, self.img_size, self.img_size)
 
     def visualize_output(self, blocked_output: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1.) -> None:
         img = self.blocks_to_img(blocked_output).detach().numpy()

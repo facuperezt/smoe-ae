@@ -26,22 +26,33 @@ class DataLoader:
         self.validation_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], "valid")
         self.initialized = False
 
+    def __iter__(self, data: str = "train"):
+        if data == "train":
+            return zip(self.training_data, self.training_data)
+        elif data == "valid":
+            return zip(self.validation_data, self.validation_data)
+        else:
+            raise ValueError("train or valid expected")
 
     def initialize(self, force_reinitialize: bool = False) -> None:
         train_pkl_not_found = not os.path.exists(f"{self.training_data_path}/train.pkl")
         valid_pkl_not_found = not os.path.exists(f"{self.validation_data_path}/valid.pkl")
         if force_reinitialize:
-            self.fill_training_data()
-            self.fill_validation_data()
+            self.fill_training_data(use_saved=False)
+            self.fill_validation_data(use_saved=False)
             self.initialized = True
             return
         
         if train_pkl_not_found:
+            self.fill_training_data(use_saved=False)
+        else:
             self.fill_training_data()
         if valid_pkl_not_found:
+            self.fill_validation_data(use_saved=False)
+        else:
             self.fill_validation_data()
         self.initialized = True
-
+        
 
     def fill_training_data(self, use_saved: bool = True, n_repeats: int = 3) -> None:
         if use_saved:

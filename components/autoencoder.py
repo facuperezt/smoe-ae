@@ -97,7 +97,7 @@ class TorchSMoE_AE(torch.nn.Module):
             ):
             fc_global_infos.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
             fc_global_infos.append(torch.nn.LeakyReLU())
-        fc_global_infos.append(torch.nn.Linear(network_architecture["combiner"]["feature_sizes"][-1], [3*n_kernels + n_kernels**2], dtype=torch.float32))
+        fc_global_infos.append(torch.nn.Linear(network_architecture["combiner"]["feature_sizes"][-1], 3*n_kernels + n_kernels**2, dtype=torch.float32))
         fc_global_infos.append(torch.nn.Tanh())
 
         self.conv = torch.nn.Sequential(*conv_layers)
@@ -109,6 +109,8 @@ class TorchSMoE_AE(torch.nn.Module):
         """
         Applies the forward pass of the AE_SMoE model.
         """
+        if len(x.shape) == 3:
+            x = x.unsqueeze(1)
         x = self.conv(x)
         x = self.lin(x)
         x_smoe = self.fc_smoe_descriptions(x)
