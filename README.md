@@ -3,6 +3,7 @@
 ![great_modeling_choices](https://github.com/facuperezt/smoe-ae/assets/32981593/c1e94e46-b6de-47bf-bf1c-27f048bd3c15)
 
 ### First results ###
+#### Without block-wise reconstruction loss ####
 ![2](https://github.com/facuperezt/smoe-ae/assets/32981593/9e1d0678-391e-44a7-832f-e90f9a732b40)
 ![8](https://github.com/facuperezt/smoe-ae/assets/32981593/e30fc080-c2c6-4392-b16c-96b0acd3974c)
 ![20](https://github.com/facuperezt/smoe-ae/assets/32981593/83eed2df-7f83-4496-bc3e-4995b708c2c6)
