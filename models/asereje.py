@@ -1,6 +1,8 @@
 import json
+from matplotlib import pyplot as plt
 import torch
-from components import TorchSMoE_SMoE as SMoE, OffsetBlock, GlobalMeanOptimizer, TorchSMoE_AE as AE, Img2Block, Block2Img, MixedLossFunction, PositionalEncodingPermute1D as PositionalEncoding, Summer
+from components import TorchSMoE_SMoE as SMoE, OffsetBlock, GlobalMeanOptimizer, TorchSMoE_AE as AE,\
+        Img2Block, Block2Img, MixedLossFunction, PositionalEncodingPermute1D as PositionalEncoding
 
 
 
@@ -16,6 +18,7 @@ class AserejePipeline(torch.nn.Module):
         self.smoe = SMoE(**self.cfg['smoe']).to(device)
         self.block2img = Block2Img(**self.cfg['block2img']).to(device)
         self.loss_function = MixedLossFunction(**self.cfg['loss_function']).to(device)
+        self.blockwise_loss_function = MixedLossFunction(**self.cfg['blockwise_loss_function']).to(device)
 
     def forward(self, x):
         x_blocked = self.img2block(x)
@@ -25,9 +28,17 @@ class AserejePipeline(torch.nn.Module):
         x = self.smoe(x)
         x = self.block2img(x)
 
-        # self.x_smoe_reconst, self.x_blocked = self.smoe(x_smoe), x_blocked
+        self.x_smoe_reconst, self.x_blocked = self.smoe(x_smoe), x_blocked
 
         return x
     
-    def loss(self, x, y):
-        return self.loss_function(x, y)# + self.loss_function(self.x_smoe_reconst, self.x_blocked)
+    def loss(self, x, y, return_separate_losses: bool = False):
+        if return_separate_losses:
+            dim0 = self.x_blocked.shape[0]
+            return self.loss_function(x, y),\
+                self.blockwise_loss_function(self.x_smoe_reconst, self.x_blocked).sum(dim=[1,2]).reshape(int(dim0**0.5), int(dim0**0.5))
+        return self.loss_function(x, y).sum() + self.blockwise_loss_function(self.x_smoe_reconst, self.x_blocked).sum()
+    
+    def visualize_output(self, img: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1.) -> None:
+        img = img.cpu().detach().numpy()
+        plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)

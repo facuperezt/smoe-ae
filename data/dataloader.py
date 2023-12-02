@@ -26,7 +26,7 @@ class DataLoader:
         self.validation_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], "valid")
         self.initialized = False
 
-    def __iter__(self, data: str = "train"):
+    def get(self, data: str = "train"):
         if data == "train":
             return zip(self.training_data, self.training_data)
         elif data == "valid":

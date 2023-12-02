@@ -50,5 +50,17 @@
         "loss_type": "l1_l2",
         "alpha": 0.8,
         "beta": 0.2
+    },
+
+    "blockwise_loss_function": {
+        "loss_type": "l1_l2",
+        "alpha": 0.8,
+        "beta": 0.2,
+        "ssim_args": {
+            "data_range": 1.0
+        },
+        "ms_ssim_args": {
+            "data_range": 1.0
+        }
     }
 }

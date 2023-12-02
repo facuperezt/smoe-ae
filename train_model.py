@@ -17,20 +17,24 @@ train_loader.initialize()
 model = Asereje("models/config_files/base_config.json", device=device)
 model: nn.Module
 
+with open("models/saves/from_server/_epoch_40.pth", "rb") as f:
+    model.load_state_dict(torch.load(f, map_location=device), strict=False)
+
 # Define your loss function
 criterion = model.loss
 
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=0.001)
 
-num_epochs = 10
+num_epochs = 100
+historic_loss = []
 # Training loop
 for epoch in range(num_epochs):
     # Set model to training mode
     model.train()
     
     # Iterate over the training dataset
-    for i, (inputs, labels) in enumerate(train_loader):
+    for i, (inputs, labels) in enumerate(train_loader.get(data="train")):
         print(i)
         inputs = inputs.to(device)
         labels = labels.to(device)
@@ -52,7 +56,13 @@ for epoch in range(num_epochs):
     # Print the loss for this epoch
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item()}")
 
-    # Save the trained model
-    torch.save(model.state_dict(), f'models/saves/last_run/_epoch_{epoch}.pth')
+    # Save the model if the loss is lower than the historic loss
+    if loss < historic_loss[-1]:
+        # Save the trained model
+        torch.save(model.state_dict(), f'models/saves/last_run/_epoch_{epoch}.pth')
+    
+    historic_loss.append(loss.item())
+    if all([abs(new_loss) >= abs(old_loss) for new_loss, old_loss in zip(historic_loss[-3:], historic_loss[-4:-1])]):
+        break
 
 torch.save(model.state_dict(), "models/saves/last_run/trained_model.pth")

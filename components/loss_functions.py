@@ -10,14 +10,14 @@ class LossL1(torch.nn.Module):
         super().__init__()
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return torch.mean(x - y)
+        return (x - y)/x.numel()
     
 class LossL2(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return torch.mean((x - y).pow(2))
+        return (x - y).pow(2)/x.numel()
 
 def _fspecial_gauss_1d(size: int, sigma: float) -> Tensor:
     r"""Create 1-D gauss kernel
@@ -286,6 +286,10 @@ class SSIM(torch.nn.Module):
         self.nonnegative_ssim = nonnegative_ssim
 
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
+        if len(X.shape) < 4:
+            X = X.unsqueeze(dim=1)
+        if len(Y.shape) < 4:
+            Y = Y.unsqueeze(dim=1)
         return ssim(
             X,
             Y,
@@ -329,6 +333,10 @@ class MS_SSIM(torch.nn.Module):
         self.K = K
 
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
+        if len(X.shape) < 4:
+            X = X.unsqueeze(dim=0)
+        if len(Y.shape) < 4:
+            Y = Y.unsqueeze(dim=0)
         return ms_ssim(
             X,
             Y,
@@ -337,35 +345,35 @@ class MS_SSIM(torch.nn.Module):
             win=self.win,
             weights=self.weights,
             K=self.K,
-        )
-    
+        )      
 
 class MixedLossFunction(torch.nn.Module):
-    def __init__(self, loss_type: str, alpha: float = 0.80, beta: float = 0.75):
+    def __init__(self, loss_type: str, alpha: float = 0.80, beta: float = 0.75, ssim_args: Optional[dict] = None, ms_ssim_args: Optional[dict] = None):
         super().__init__()
         self.alpha = alpha
         self.beta = beta
         self.l1 = LossL1()
         self.l2 = LossL2()
-        self.ssim = SSIM()
-        self.ms_ssim = MS_SSIM()
+        self.ssim = SSIM(**ssim_args if ssim_args is not None else {})
+        self.ms_ssim = MS_SSIM(**ms_ssim_args if ms_ssim_args is not None else {})
         self.loss_type = loss_type
 
     def forward_l1_l2(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return self.alpha*(self.beta*self.l1(x, y) + (1-self.beta)*self.l2(x, y))
+        return self.beta*self.l1(x, y) + (1-self.beta)*self.l2(x, y)
     
+    def forward_ssim_ms_ssim(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        return (1-self.beta)*self.ssim(x, y) + self.beta*self.ms_ssim(x, y)
+
     def forward_all(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return self.alpha*(
-            self.beta*self.l1(x, y) + (1-self.beta)*self.l2(x, y)
-            ) \
-                +\
-            (1-self.alpha)*(
-            (1-self.beta)*self.ssim(x, y) + self.beta*self.ms_ssim(x, y)
-            )
+        return self.alpha*self.forward_l1_l2(x, y) + (1-self.alpha)*self.forward_ssim_ms_ssim(x, y)
     
+
+
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         if self.loss_type == 'l1_l2':
             return self.forward_l1_l2(x, y)
+        elif self.loss_type == 'ssim_msssim':
+            return self.forward_ssim_ms_ssim(x, y)
         elif self.loss_type == 'all':
             return self.forward_all(x, y)
         else:

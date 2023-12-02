@@ -163,3 +163,10 @@ __pycache__/
 # Ignore training data
 data/train/
 data/valid/
+data/visualizations/
+
+# Ignore saved models
+models/saves/
+
+bash_scripts/
+resources/
