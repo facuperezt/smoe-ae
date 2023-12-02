@@ -77,6 +77,7 @@ class TorchSMoE_AE(torch.nn.Module):
             ):
             means_dense_layers.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
             means_dense_layers.append(torch.nn.ReLU())
+            means_dense_layers.append(torch.nn.Dropout(0.35))
 
         ### SMoE layers ###
         fc_smoe_descriptions = []
@@ -86,6 +87,7 @@ class TorchSMoE_AE(torch.nn.Module):
             ):
             fc_smoe_descriptions.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
             fc_smoe_descriptions.append(torch.nn.ReLU())
+            fc_smoe_descriptions.append(torch.nn.Dropout(0.35))
         fc_smoe_descriptions.append(torch.nn.Linear(network_architecture["smoe"]["feature_sizes"][-1], 3*n_kernels + n_kernels**2, dtype=torch.float32))
         fc_smoe_descriptions.append(MixedActivation(n_kernels))
 
@@ -97,6 +99,7 @@ class TorchSMoE_AE(torch.nn.Module):
             ):
             fc_global_infos.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
             fc_global_infos.append(torch.nn.LeakyReLU())
+            fc_global_infos.append(torch.nn.Dropout(0.35))
         fc_global_infos.append(torch.nn.Linear(network_architecture["combiner"]["feature_sizes"][-1], 3*n_kernels + n_kernels**2, dtype=torch.float32))
         fc_global_infos.append(torch.nn.Tanh())
 

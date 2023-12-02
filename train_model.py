@@ -67,7 +67,7 @@ for epoch in range(num_epochs):
         torch.save(model.state_dict(), f'models/saves/last_run/_epoch_{epoch}.pth')
 
     historic_loss.append(loss.item())
-    if all([abs(new_loss) >= abs(old_loss) for new_loss, old_loss in zip(historic_loss[-5:], historic_loss[-6:-1])]):
+    if epoch > 25 and all([abs(new_loss) >= abs(old_loss) for new_loss, old_loss in zip(historic_loss[-5:], historic_loss[-6:-1])]):
         break
 
 # Save the model at the end of training
