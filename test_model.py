@@ -29,7 +29,7 @@ train_loader.initialize()
 model = Asereje("models/config_files/base_config.json", device=device)
 model: nn.Module
 
-with open("models/saves/from_server/_epoch_40.pth", "rb") as f:
+with open("models/saved_models/first_results.pth", "rb") as f:  # If this file doesn't exist, checkout the "with_uploaded_model" branch
     model.load_state_dict(torch.load(f, map_location=device), strict=False)
 
 model.eval()
