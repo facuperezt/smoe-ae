@@ -4,10 +4,14 @@ import torch.optim as optim
 from models import Asereje
 from data import DataLoader
 
-# torch.autograd.set_detect_anomaly(True)
 
 # Device configuration
-device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+if torch.backends.mps.is_available():
+    device = torch.device('mps')
+elif torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 # Define your dataloader
 train_loader = DataLoader()
