@@ -43,7 +43,7 @@ for epoch in range(num_epochs):
     model.train()
 
     # Iterate over the training dataset
-    for i, (inputs, labels) in enumerate(train_loader.get(data="train", limit_to=2)):
+    for i, (inputs, labels) in enumerate(train_loader.get(data="train", limit_to=None)):
         print(i)
         inputs = inputs.to(device)
         labels = labels.to(device)
