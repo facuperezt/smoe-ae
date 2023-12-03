@@ -6,7 +6,10 @@ from models import Asereje
 from data import DataLoader
 
 # Initialize WandB
-wandb.init(project="your_project_name", name="your_run_name")
+wandb.init(project="your_project_name", name="your_run_name", mode="online")
+# define a metric we are interested in the minimum of
+wandb.define_metric("Losses", summary="mean")
+
 
 # Device configuration
 if torch.backends.mps.is_available():
@@ -50,16 +53,17 @@ for epoch in range(num_epochs):
         outputs = model(inputs)
 
         # Compute the loss
-        loss = criterion(outputs, labels)
+        loss = criterion(outputs, labels, return_separate_losses=True)
+        total_loss = model.loss_function.total_loss(loss)
 
         # Backward pass
-        loss.backward()
+        total_loss.backward()
 
         # Update the weights
         optimizer.step()
 
-    # Log the loss for this epoch to WandB
-    wandb.log({"Loss": loss.item()})
+        # Log the loss for this epoch to WandB
+        wandb.log({"Losses": loss})
 
     # Save the model if the loss is lower than the historic loss
     if not historic_loss or loss < historic_loss[-1]:

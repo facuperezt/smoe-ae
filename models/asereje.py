@@ -35,9 +35,14 @@ class AserejePipeline(torch.nn.Module):
     def loss(self, x, y, return_separate_losses: bool = False):
         if return_separate_losses:
             dim0 = self.x_blocked.shape[0]
-            return self.loss_function(x, y),\
-                self.blockwise_loss_function(self.x_smoe_reconst, self.x_blocked).sum(dim=[1,2]).reshape(int(dim0**0.5), int(dim0**0.5))
-        return self.loss_function(x, y).sum() + self.blockwise_loss_function(self.x_smoe_reconst, self.x_blocked).sum()
+            return {
+                "e2e_loss": self.loss_function(x, y),
+                "blockwise_loss": {
+                    key: value.sum(dim=[1,2]).reshape(int(dim0**0.5), int(dim0**0.5)) 
+                    for key, value in self.blockwise_loss_function(self.x_smoe_reconst, self.x_blocked).items()
+                    }
+            }
+        return {"e2e_loss": sum(self.loss_function(x, y).values()), "blockwise_loss": sum(self.blockwise_loss_function(self.x_smoe_reconst, self.x_blocked).values())}
     
     def visualize_output(self, img: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1.) -> None:
         img = img.cpu().detach().numpy()

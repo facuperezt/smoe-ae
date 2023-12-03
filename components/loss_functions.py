@@ -5,12 +5,21 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
+def sum_nested_dicts(d: dict[str, torch.Tensor]) -> float:
+    total = 0
+    for value in d.values():
+        if isinstance(value, dict):
+            total += sum_nested_dicts(value)
+        else:
+            total += value.sum().item()
+    return total
+
 class LossL1(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return (x - y)/x.numel()
+        return (x - y).abs()/x.numel()
     
 class LossL2(torch.nn.Module):
     def __init__(self):
@@ -348,28 +357,112 @@ class MS_SSIM(torch.nn.Module):
         )      
 
 class MixedLossFunction(torch.nn.Module):
-    def __init__(self, loss_type: str, alpha: float = 0.80, beta: float = 0.75, ssim_args: Optional[dict] = None, ms_ssim_args: Optional[dict] = None):
+    """
+    A custom loss function that combines multiple loss functions based on the specified loss type.
+
+    Args:
+        loss_type (str): The type of loss to be used. Valid options are 'l1_l2', 'ssim_msssim', and 'all'.
+        alpha (float, optional): The weight for the combination of L1 and L2 losses. Defaults to 0.80.
+        beta (float, optional): The weight for the combination of SSIM and MS-SSIM losses. Defaults to 0.75.
+        gamma (float, optional): The weight for the combination of SSIM and MS-SSIM losses. Defaults to 0.70.
+        ssim_args (dict, optional): Additional arguments for the SSIM loss function. Defaults to None.
+        ms_ssim_args (dict, optional): Additional arguments for the MS-SSIM loss function. Defaults to None.
+
+    Returns:
+        torch.Tensor: The computed loss value.
+
+    Raises:
+        ValueError: If an invalid loss_type is provided.
+
+    Examples:
+        loss_fn = MixedLossFunction(loss_type='all', alpha=0.80, beta=0.75, gamma=0.70)
+        loss = loss_fn(x, y)
+    """
+    def __init__(self, loss_type: str, alpha: float = 0.80, beta: float = 0.75, gamma: float = 0.7, ssim_args: Optional[dict] = None, ms_ssim_args: Optional[dict] = None):
         super().__init__()
         self.alpha = alpha
         self.beta = beta
+        self.gamma = gamma
         self.l1 = LossL1()
         self.l2 = LossL2()
         self.ssim = SSIM(**ssim_args if ssim_args is not None else {})
         self.ms_ssim = MS_SSIM(**ms_ssim_args if ms_ssim_args is not None else {})
         self.loss_type = loss_type
 
+    def total_loss(self, loss_dict: dict) -> float:
+        """
+        Computes the total loss from a dictionary of losses.
+
+        Args:
+            loss_dict (dict): A dictionary of losses.
+
+        Returns:
+            float: The computed loss value.
+        """
+        return sum_nested_dicts(loss_dict)
+
     def forward_l1_l2(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return self.beta*self.l1(x, y) + (1-self.beta)*self.l2(x, y)
+        """
+        Computes the combined L1 and L2 loss.
+
+        Args:
+            x (torch.Tensor): The predicted tensor.
+            y (torch.Tensor): The target tensor.
+
+        Returns:
+            torch.Tensor: The computed loss value.
+        """
+        return {
+            "l1_loss": self.beta*self.l1(x, y),
+            "l2_loss": (1-self.beta)*self.l2(x, y),
+        }
     
     def forward_ssim_ms_ssim(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return (1-self.beta)*self.ssim(x, y) + self.beta*self.ms_ssim(x, y)
+        """
+        Computes the combined SSIM and MS-SSIM loss.
+
+        Args:
+            x (torch.Tensor): The predicted tensor.
+            y (torch.Tensor): The target tensor.
+
+        Returns:
+            torch.Tensor: The computed loss value.
+        """
+        return {
+            "ssim_loss": self.gamma*self.ssim(x, y),
+            "ms_ssim_loss": (1-self.gamma)*self.ms_ssim(x, y),
+        }
 
     def forward_all(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return self.alpha*self.forward_l1_l2(x, y) + (1-self.alpha)*self.forward_ssim_ms_ssim(x, y)
+        """
+        Computes the combined loss using all available loss functions.
+
+        Args:
+            x (torch.Tensor): The predicted tensor.
+            y (torch.Tensor): The target tensor.
+
+        Returns:
+            torch.Tensor: The computed loss value.
+        """
+        return {
+            "l1_l2_loss": {loss_type: self.alpha*loss_value for loss_type, loss_value in self.forward_l1_l2(x,y)},
+            "ssim_msssim_loss": {loss_type: (1-self.alpha)*loss_value for loss_type, loss_value in self.forward_ssim_ms_ssim(x, y)},
+        }
     
-
-
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the loss based on the specified loss type.
+
+        Args:
+            x (torch.Tensor): The predicted tensor.
+            y (torch.Tensor): The target tensor.
+
+        Returns:
+            torch.Tensor: The computed loss value.
+
+        Raises:
+            ValueError: If an invalid loss_type is provided.
+        """
         if self.loss_type == 'l1_l2':
             return self.forward_l1_l2(x, y)
         elif self.loss_type == 'ssim_msssim':
