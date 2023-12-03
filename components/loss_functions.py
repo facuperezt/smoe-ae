@@ -5,15 +5,6 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-def sum_nested_dicts(d: Dict[str, torch.Tensor]) -> torch.Tensor:
-    total = 0
-    for value in d.values():
-        if isinstance(value, Dict):
-            total += sum_nested_dicts(value)
-        else:
-            total += value.sum()
-    return total
-
 class LossL1(torch.nn.Module):
     def __init__(self):
         super().__init__()

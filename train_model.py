@@ -3,7 +3,14 @@ import torch.nn as nn
 import torch.optim as optim
 import wandb  # Add this import
 from models import Asereje
+import argparse
 from data import DataLoader
+from utils import flatten_dict, sum_nested_dicts
+
+# Add argparse to load model from a path
+parser = argparse.ArgumentParser()
+parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
+args = parser.parse_args()
 
 # Initialize WandB
 wandb.init(project="your_project_name", name="your_run_name", mode="online")
@@ -27,6 +34,10 @@ train_loader.initialize()
 # Define your model
 model = Asereje("models/config_files/base_config.json", device=device)
 model: nn.Module
+
+if args.model_path is not None:
+    with open(args.model_path, "rb") as f:
+        model.load_state_dict(torch.load(f, map_location=device), strict=False)
 
 # Define your loss function
 criterion = model.loss
@@ -55,7 +66,7 @@ for epoch in range(num_epochs):
 
         # Compute the loss
         loss = criterion(outputs, labels, return_separate_losses=True)
-        total_loss = model.loss_function.total_loss(loss)
+        total_loss = sum_nested_dicts(loss)
 
         # Backward pass
         total_loss.backward()
@@ -64,7 +75,7 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         # Log the loss for this epoch to WandB
-        wandb.log({"Losses": loss, "Total Loss": total_loss})
+        wandb.log(flatten_dict({"Losses": loss, "Total Loss": total_loss}))
 
     # Save the model if the loss is lower than the historic loss
     if not historic_loss or total_loss < historic_loss[-1]:
