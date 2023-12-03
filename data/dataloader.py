@@ -11,6 +11,7 @@ def initialize_transforms(img_size: int = 512):
         Grayscale(),
         v2.RandomResizedCrop(size=(img_size, img_size), antialias=True),
         v2.RandomHorizontalFlip(p=0.5),
+        v2.RandomVerticalFlip(p=0.5),
         v2.ToDtype(torch.float32, scale=False),
     ])
 
@@ -26,11 +27,11 @@ class DataLoader:
         self.validation_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], "valid")
         self.initialized = False
 
-    def get(self, data: str = "train"):
+    def get(self, data: str = "train", limit_to: int = None):
         if data == "train":
-            return zip(self.training_data, self.training_data)
+            return zip(self.training_data[:limit_to], self.training_data[:limit_to])
         elif data == "valid":
-            return zip(self.validation_data, self.validation_data)
+            return zip(self.validation_data[:limit_to], self.validation_data[:limit_to])
         else:
             raise ValueError("train or valid expected")
 

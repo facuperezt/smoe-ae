@@ -6,9 +6,10 @@ from models import Asereje
 from data import DataLoader
 
 # Initialize WandB
-wandb.init(project="your_project_name", name="your_run_name", mode="online")
+wandb.init(project="your_project_name", name="your_run_name", mode="disabled")
 # define a metric we are interested in the minimum of
 wandb.define_metric("Losses", summary="mean")
+wandb.define_metric("Total Loss", summary="min")
 
 
 # Device configuration
@@ -42,7 +43,7 @@ for epoch in range(num_epochs):
     model.train()
 
     # Iterate over the training dataset
-    for i, (inputs, labels) in enumerate(train_loader.get(data="train")):
+    for i, (inputs, labels) in enumerate(train_loader.get(data="train", limit_to=2)):
         print(i)
         inputs = inputs.to(device)
         labels = labels.to(device)
@@ -63,14 +64,14 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         # Log the loss for this epoch to WandB
-        wandb.log({"Losses": loss})
+        wandb.log({"Losses": loss, "Total Loss": total_loss})
 
     # Save the model if the loss is lower than the historic loss
-    if not historic_loss or loss < historic_loss[-1]:
+    if not historic_loss or total_loss < historic_loss[-1]:
         # Save the trained model
         torch.save(model.state_dict(), f'models/saves/last_run/_epoch_{epoch}.pth')
 
-    historic_loss.append(loss.item())
+    historic_loss.append(total_loss.item())
     if epoch > 25 and all([abs(new_loss) >= abs(old_loss) for new_loss, old_loss in zip(historic_loss[-5:], historic_loss[-6:-1])]):
         break
 
