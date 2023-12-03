@@ -6,6 +6,7 @@ from models import Asereje
 import argparse
 from data import DataLoader
 from utils import flatten_dict, sum_nested_dicts
+from torch.optim.lr_scheduler import ExponentialLR
 
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
@@ -45,6 +46,7 @@ criterion = model.loss
 
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+scheduler = ExponentialLR(optimizer, gamma=0.9)
 
 num_epochs = 100
 historic_loss = []
@@ -78,6 +80,7 @@ for epoch in range(num_epochs):
         # Log the loss for this epoch to WandB
         wandb.log(flatten_dict({"Losses": loss, "Total Loss": total_loss}))
 
+    scheduler.step()
     # Save the model if the loss is lower than the historic loss
     if not historic_loss or total_loss < historic_loss[-1]:
         # Save the trained model
