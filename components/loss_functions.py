@@ -1,14 +1,14 @@
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-def sum_nested_dicts(d: dict[str, torch.Tensor]) -> float:
+def sum_nested_dicts(d: Dict[str, torch.Tensor]) -> float:
     total = 0
     for value in d.values():
-        if isinstance(value, dict):
+        if isinstance(value, Dict):
             total += sum_nested_dicts(value)
         else:
             total += value.sum().item()
@@ -378,7 +378,7 @@ class MixedLossFunction(torch.nn.Module):
         loss_fn = MixedLossFunction(loss_type='all', alpha=0.80, beta=0.75, gamma=0.70)
         loss = loss_fn(x, y)
     """
-    def __init__(self, loss_type: str, alpha: float = 0.80, beta: float = 0.75, gamma: float = 0.7, ssim_args: Optional[dict] = None, ms_ssim_args: Optional[dict] = None):
+    def __init__(self, loss_type: str, alpha: float = 0.80, beta: float = 0.75, gamma: float = 0.7, ssim_args: Optional[Dict] = None, ms_ssim_args: Optional[Dict] = None):
         super().__init__()
         self.alpha = alpha
         self.beta = beta
@@ -389,7 +389,7 @@ class MixedLossFunction(torch.nn.Module):
         self.ms_ssim = MS_SSIM(**ms_ssim_args if ms_ssim_args is not None else {})
         self.loss_type = loss_type
 
-    def total_loss(self, loss_dict: dict) -> float:
+    def total_loss(self, loss_dict: Dict) -> float:
         """
         Computes the total loss from a dictionary of losses.
 
