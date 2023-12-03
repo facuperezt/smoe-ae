@@ -5,13 +5,13 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-def sum_nested_dicts(d: Dict[str, torch.Tensor]) -> float:
+def sum_nested_dicts(d: Dict[str, torch.Tensor]) -> torch.Tensor:
     total = 0
     for value in d.values():
         if isinstance(value, Dict):
             total += sum_nested_dicts(value)
         else:
-            total += value.sum().item()
+            total += value.sum()
     return total
 
 class LossL1(torch.nn.Module):
@@ -389,7 +389,7 @@ class MixedLossFunction(torch.nn.Module):
         self.ms_ssim = MS_SSIM(**ms_ssim_args if ms_ssim_args is not None else {})
         self.loss_type = loss_type
 
-    def total_loss(self, loss_dict: Dict) -> float:
+    def total_loss(self, loss_dict: Dict) -> torch.Tensor:
         """
         Computes the total loss from a dictionary of losses.
 
