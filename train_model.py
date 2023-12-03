@@ -10,12 +10,13 @@ from utils import flatten_dict, sum_nested_dicts
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
+parser.add_argument("--lr", default=0.001, type=float, help="Learning rate for optimizer")
 args = parser.parse_args()
 
 # Initialize WandB
 wandb.init(project="your_project_name", name="your_run_name", mode="online")
+# wandb.define_metric("Losses", summary="mean")
 # define a metric we are interested in the minimum of
-wandb.define_metric("Losses", summary="mean")
 wandb.define_metric("Total Loss", summary="min")
 
 
@@ -43,7 +44,7 @@ if args.model_path is not None:
 criterion = model.loss
 
 # Define your optimizer
-optimizer = optim.AdamW(model.parameters(), lr=0.001)
+optimizer = optim.AdamW(model.parameters(), lr=args.lr)
 
 num_epochs = 100
 historic_loss = []
