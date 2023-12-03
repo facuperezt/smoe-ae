@@ -6,7 +6,7 @@ from models import Asereje
 from data import DataLoader
 
 # Initialize WandB
-wandb.init(project="your_project_name", name="your_run_name", mode="disabled")
+wandb.init(project="your_project_name", name="your_run_name", mode="online")
 # define a metric we are interested in the minimum of
 wandb.define_metric("Losses", summary="mean")
 wandb.define_metric("Total Loss", summary="min")
