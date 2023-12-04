@@ -17,7 +17,7 @@ parser.add_argument("--lr", default=0.001, type=float, help="Learning rate for o
 args, unknown = parser.parse_known_args()
 
 # Initialize WandB
-wandb.init(project="your_project_name", name="your_run_name", mode="disabled")
+wandb.init(project="SMoE with funky encoder", name="With Block-wise Loss and BatchNorm", mode="online")
 # wandb.define_metric("Losses", summary="mean")
 # define a metric we are interested in the minimum of
 wandb.define_metric("Total Loss", summary="min")
