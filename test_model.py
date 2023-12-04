@@ -11,6 +11,7 @@ from utils import flatten_dict, sum_nested_dicts
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
+parser.add_argument("--save", action="store_true", help="Saves the results")
 args = parser.parse_args()
 
 def set_title(ax: plt.Axes, title: str) -> None:
@@ -42,7 +43,7 @@ with open(args.model_path, "rb") as f:  # If this file doesn't exist, checkout t
 
 model.eval()
 # Iterate over the training dataset
-for i, (inputs, labels) in enumerate(train_loader.get(data="valid")):
+for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5)):
     print(i)
     inputs = inputs.to(device)
     labels = labels.to(device)
@@ -67,5 +68,8 @@ for i, (inputs, labels) in enumerate(train_loader.get(data="valid")):
     _l2 = loss["blockwise_loss"]["l2_loss"].squeeze()
     model.visualize_output(_l2, vmin=_l2.min(), vmax=_l2.max())
 
-    with open(f"data/visualizations/reconstruction_losses/A/with_blockwise_optimization/{i}.png", "wb") as f:
-        fig.savefig(f, bbox_inches='tight')
+    if args.save:
+        with open(f"data/visualizations/reconstruction_losses/A/with_blockwise_optimization/{i}.png", "wb") as f:
+            fig.savefig(f, bbox_inches='tight')
+    else:
+        plt.show()

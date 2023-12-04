@@ -27,13 +27,18 @@ class DataLoader:
         self.validation_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], "valid")
         self.initialized = False
 
-    def get(self, data: str = "train", limit_to: int = None):
+    def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
         if data == "train":
-            return zip(self.training_data[:limit_to], self.training_data[:limit_to])
+            data = torch.cat(self.training_data[:limit_to], dim=0)
         elif data == "valid":
-            return zip(self.validation_data[:limit_to], self.validation_data[:limit_to])
+            data = torch.cat(self.validation_data[:limit_to], dim=0)
         else:
             raise ValueError("train or valid expected")
+        if batch_size != 1:
+            for i in range(0, len(data), batch_size):
+                yield data[i:i+batch_size], data[i:i+batch_size]
+        else:
+            return zip(data, data)
 
     def initialize(self, force_reinitialize: bool = False) -> None:
         train_pkl_not_found = not os.path.exists(f"{self.training_data_path}/train.pkl")

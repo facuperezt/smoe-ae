@@ -66,6 +66,7 @@ class TorchSMoE_AE(torch.nn.Module):
             network_architecture["conv"]["channel_sizes"][:-1]
             ):
             conv_layers.append(torch.nn.Conv2d(in_channels, out_channels, kernel_size=(3,3), padding=1, dtype=torch.float32))
+            conv_layers.append(torch.nn.BatchNorm2d(out_channels))
             conv_layers.append(torch.nn.LeakyReLU())
         conv_layers.append(torch.nn.Flatten())
 
@@ -76,6 +77,7 @@ class TorchSMoE_AE(torch.nn.Module):
             network_architecture["lin"]["feature_sizes"][:-1]
             ):
             means_dense_layers.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
+            means_dense_layers.append(torch.nn.BatchNorm1d(out_features))
             means_dense_layers.append(torch.nn.ReLU())
             means_dense_layers.append(torch.nn.Dropout(0.35))
 

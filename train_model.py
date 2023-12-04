@@ -1,3 +1,4 @@
+#%%
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,15 +8,16 @@ import argparse
 from data import DataLoader
 from utils import flatten_dict, sum_nested_dicts
 from torch.optim.lr_scheduler import ExponentialLR
+from torchviz import make_dot
 
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
 parser.add_argument("--lr", default=0.001, type=float, help="Learning rate for optimizer")
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
 
 # Initialize WandB
-wandb.init(project="your_project_name", name="your_run_name", mode="online")
+wandb.init(project="your_project_name", name="your_run_name", mode="disabled")
 # wandb.define_metric("Losses", summary="mean")
 # define a metric we are interested in the minimum of
 wandb.define_metric("Total Loss", summary="min")
@@ -46,9 +48,9 @@ criterion = model.loss
 
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+num_epochs = 100
 scheduler = ExponentialLR(optimizer, gamma=0.9)
 
-num_epochs = 100
 historic_loss = []
 
 # Training loop
@@ -57,22 +59,28 @@ for epoch in range(num_epochs):
     model.train()
 
     # Iterate over the training dataset
-    for i, (inputs, labels) in enumerate(train_loader.get(data="train", limit_to=None)):
+    for i, (inputs, labels) in enumerate(train_loader.get(data="train", limit_to=None, batch_size=5)):
         print(i)
         inputs = inputs.to(device)
         labels = labels.to(device)
+
         # Zero the gradients
         optimizer.zero_grad()
 
-        # Forward pass
-        outputs = model(inputs)
+        total_loss = 0
+        for _input, _label in zip(inputs, labels):
+            # Forward pass
+            output = model(_input)
 
-        # Compute the loss
-        loss = criterion(outputs, labels, return_separate_losses=True)
-        total_loss = sum_nested_dicts(loss)
+            # Compute the loss
+            loss = criterion(output, _label, return_separate_losses=True)
+            total_loss = sum_nested_dicts(loss)
+            total_loss.backward()
+
 
         # Backward pass
-        total_loss.backward()
+        # make_dot(total_loss, params=dict(model.named_parameters()), show_attrs=True, show_saved=True).render("full_backwards", format="pdf")
+        # total_loss.backward()
 
         # Update the weights
         optimizer.step()

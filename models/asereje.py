@@ -20,15 +20,17 @@ class AserejePipeline(torch.nn.Module):
         self.loss_function = MixedLossFunction(**self.cfg['loss_function']).to(device)
         self.blockwise_loss_function = MixedLossFunction(**self.cfg['blockwise_loss_function']).to(device)
 
-    def forward(self, x):
-        x_blocked = self.img2block(x)
+    def forward(self, x: torch.Tensor):
+        x_blocked: torch.Tensor = self.img2block(x)
+        x_smoe: torch.Tensor
+        x_comb: torch.Tensor
         x_smoe, x_comb = self.ae(x_blocked)
         x_comb = self.positional_encoding(x_comb.unsqueeze(1)) + x_comb
         x = self.global_mean_optimizer(x_smoe, x_comb) + x_smoe
         x = self.smoe(x)
         x = self.block2img(x)
 
-        self.x_smoe_reconst, self.x_blocked = self.smoe(x_smoe), x_blocked
+        self.x_smoe_reconst, self.x_blocked = self.smoe(x_smoe.clone()), x_blocked.clone()
 
         return x
     

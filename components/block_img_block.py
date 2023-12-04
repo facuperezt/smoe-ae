@@ -10,14 +10,19 @@ __all__ = [
 ]
 
 class BlockImgBlock(torch.nn.Module):
-    def __init__(self, block_size: int, img_size: int):
+    def __init__(self, block_size: int, img_size: int, require_grad: bool = False):
         super().__init__()
         self.block_size = block_size
         self.img_size = img_size
-        
+        self.require_grad = require_grad
+
     def img_to_blocks(self, img_input: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
         device = img_input.device
-        return torch.tensor(sliding_window(np.asarray(img_input.squeeze().cpu()), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, 1).to(device)
+        return torch.tensor(
+                sliding_window(np.asarray(img_input.detach().squeeze().cpu()), 2*[self.block_size], 2*[self.block_size], False),
+                requires_grad=self.require_grad,
+                dtype=torch.float32,
+            ).flatten(0, 1).to(device)
 
     def blocks_to_img(self, blocked_input: torch.Tensor) -> torch.Tensor:
         reshape_size = (int(self.img_size/self.block_size), int(self.img_size/self.block_size), self.block_size, self.block_size)
