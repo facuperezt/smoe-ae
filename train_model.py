@@ -8,12 +8,11 @@ import argparse
 from data import DataLoader
 from utils import flatten_dict, sum_nested_dicts
 from torch.optim.lr_scheduler import ExponentialLR
-from torchviz import make_dot
 
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
-parser.add_argument("--lr", default=0.001, type=float, help="Learning rate for optimizer")
+parser.add_argument("--lr", default=1e-6, type=float, help="Learning rate for optimizer")
 args, unknown = parser.parse_known_args()
 
 # Initialize WandB
@@ -49,7 +48,7 @@ criterion = model.loss
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=args.lr)
 num_epochs = 100
-scheduler = ExponentialLR(optimizer, gamma=0.9)
+scheduler = ExponentialLR(optimizer, gamma=0.918)
 
 historic_loss = []
 
