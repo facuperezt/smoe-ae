@@ -48,7 +48,7 @@ criterion = model.loss
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=args.lr)
 num_epochs = 100
-scheduler = ExponentialLR(optimizer, gamma=0.98)
+scheduler = ExponentialLR(optimizer, gamma=0.955)
 
 historic_loss = []
 
