@@ -29,14 +29,14 @@ class DataLoader:
         self.initialized = False
 
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
-        perm = torch.randperm(len(self.training_data))
-        self.training_data = self.training_data[perm, :, :]
         if data == "train":
             data = torch.cat(self.training_data[:limit_to], dim=0)
         elif data == "valid":
             data = torch.cat(self.validation_data[:limit_to], dim=0)
         else:
             raise ValueError("train or valid expected")
+        perm = torch.randperm(len(data))
+        data = data[perm]
         if batch_size == 0:
             batch_size = len(data)
         elif batch_size < 0:
