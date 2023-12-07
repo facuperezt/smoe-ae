@@ -1,4 +1,5 @@
 import pickle
+from typing import Optional
 import torch 
 from torchvision.transforms import v2, ToTensor, Grayscale
 import os
@@ -34,11 +35,10 @@ class DataLoader:
             data = torch.cat(self.validation_data[:limit_to], dim=0)
         else:
             raise ValueError("train or valid expected")
-        if batch_size != 1:
-            for i in range(0, len(data), batch_size):
-                yield data[i:i+batch_size], data[i:i+batch_size]
-        else:
-            return zip(data, data)
+        if batch_size == 0:
+            batch_size = len(data)
+        for i in range(0, len(data), batch_size):
+            yield data[i:i+batch_size], data[i:i+batch_size]
 
     def initialize(self, force_reinitialize: bool = False) -> None:
         train_pkl_not_found = not os.path.exists(f"{self.training_data_path}/train.pkl")

@@ -91,7 +91,7 @@ class TorchSMoE_AE(torch.nn.Module):
             network_architecture["lin"]["feature_sizes"][1:],
             network_architecture["lin"]["feature_sizes"][:-1]
             ):
-            means_dense_layers.append(LinearBlock(in_features, out_features), add_batchnorm=True, dropout=0.35)
+            means_dense_layers.append(LinearBlock(in_features, out_features, add_batchnorm=True, dropout=0.35))
 
         ### SMoE layers ###
         fc_smoe_descriptions = []

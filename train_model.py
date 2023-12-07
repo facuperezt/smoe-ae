@@ -1,4 +1,6 @@
 #%%
+import tqdm
+from typing import Optional
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -13,10 +15,11 @@ from torch.optim.lr_scheduler import ExponentialLR
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
 parser.add_argument("--lr", default=1e-6, type=float, help="Learning rate for optimizer")
+parser.add_argument("--batch_size", default=0, type=int, help="Batch size for training")
 args, unknown = parser.parse_known_args()
 
 # Initialize WandB
-wandb.init(project="SMoE with funky encoder", name="With Block-wise Loss and BatchNorm", mode="online")
+wandb.init(project="SMoE with funky encoder", name="With Block-wise Loss and BatchNorm", mode="disabled")
 # wandb.define_metric("Losses", summary="mean")
 # define a metric we are interested in the minimum of
 wandb.define_metric("Total Loss", summary="min")
@@ -57,17 +60,17 @@ for epoch in range(num_epochs):
     # Set model to training mode
     model.train()
 
+    nr_batches = len(train_loader.training_data)//args.batch_size if args.batch_size else 1
     # Iterate over the training dataset
-    for i, (inputs, labels) in enumerate(train_loader.get(data="train", limit_to=None, batch_size=5)):
-        print(i)
+    for i, (inputs, labels) in tqdm.tqdm(enumerate(train_loader.get(data="train", limit_to=None, batch_size=args.batch_size)), total=nr_batches, desc=f"Epoch {epoch}"):
         inputs = inputs.to(device)
         labels = labels.to(device)
 
         # Zero the gradients
         optimizer.zero_grad()
 
-        total_loss = 0
-        for _input, _label in zip(inputs, labels):
+        total_loss_mean = 0
+        for _input, _label in tqdm.tqdm(zip(inputs, labels), total=len(inputs), desc=f"Batch {i}"):
             # Forward pass
             output = model(_input)
 
@@ -75,6 +78,7 @@ for epoch in range(num_epochs):
             loss = criterion(output, _label, return_separate_losses=True)
             total_loss = sum_nested_dicts(loss)
             total_loss.backward()
+            total_loss_mean += total_loss.item()/len(inputs)
 
 
         # Backward pass
@@ -83,7 +87,7 @@ for epoch in range(num_epochs):
 
         # Update the weights
         optimizer.step()
-
+        print("Mean Loss: ", total_loss_mean)
         # Log the loss for this epoch to WandB
         wandb.log(flatten_dict({"Losses": loss, "Total Loss": total_loss}))
 
