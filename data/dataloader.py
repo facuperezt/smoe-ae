@@ -38,7 +38,7 @@ class DataLoader:
         if batch_size == 0:
             batch_size = len(data)
         elif batch_size < 0:
-            batch_size = len(data)/(-batch_size)
+            batch_size = int(len(data)/(-batch_size))
         for i in range(0, len(data), batch_size):
             yield data[i:i+batch_size], data[i:i+batch_size]
 
