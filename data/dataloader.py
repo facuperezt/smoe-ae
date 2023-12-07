@@ -29,6 +29,8 @@ class DataLoader:
         self.initialized = False
 
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
+        perm = torch.randperm(len(self.training_data))
+        self.training_data = self.training_data[perm, :, :]
         if data == "train":
             data = torch.cat(self.training_data[:limit_to], dim=0)
         elif data == "valid":

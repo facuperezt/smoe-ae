@@ -14,8 +14,8 @@ from torch.optim.lr_scheduler import ExponentialLR
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
-parser.add_argument("--lr", default=1e-6, type=float, help="Learning rate for optimizer")
-parser.add_argument("--batch_size", default=0, type=int, help="Batch size for training")
+parser.add_argument("--lr", default=1e-3, type=float, help="Learning rate for optimizer")
+parser.add_argument("--batch_size", default=-10, type=int, help="Batch size for training")
 args, unknown = parser.parse_known_args()
 
 # Initialize WandB
@@ -48,7 +48,7 @@ criterion = model.loss
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=args.lr)
 num_epochs = 100
-scheduler = ExponentialLR(optimizer, gamma=0.918)
+scheduler = ExponentialLR(optimizer, gamma=0.98)
 
 historic_loss = []
 
