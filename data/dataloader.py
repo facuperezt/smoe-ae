@@ -41,6 +41,7 @@ class DataLoader:
             batch_size = int(len(data)/(-batch_size))
         for i in range(0, len(data), batch_size):
             yield data[i:i+batch_size], data[i:i+batch_size]
+        yield data[i+batch_size:], data[i+batch_size:]
 
     def initialize(self, force_reinitialize: bool = False) -> None:
         train_pkl_not_found = not os.path.exists(f"{self.training_data_path}/train.pkl")
