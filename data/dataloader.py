@@ -37,6 +37,8 @@ class DataLoader:
             raise ValueError("train or valid expected")
         if batch_size == 0:
             batch_size = len(data)
+        elif batch_size < 0:
+            batch_size = len(data)/(-batch_size)
         for i in range(0, len(data), batch_size):
             yield data[i:i+batch_size], data[i:i+batch_size]
 
