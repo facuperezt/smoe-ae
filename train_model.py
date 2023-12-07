@@ -19,10 +19,7 @@ parser.add_argument("--batch_size", default=0, type=int, help="Batch size for tr
 args, unknown = parser.parse_known_args()
 
 # Initialize WandB
-wandb.init(project="SMoE with funky encoder", name="With Block-wise Loss and BatchNorm", mode="disabled")
-# wandb.define_metric("Losses", summary="mean")
-# define a metric we are interested in the minimum of
-wandb.define_metric("Total Loss", summary="min")
+wandb.init(project="SMoE with funky encoder", name="With Block-wise Loss and BatchNorm", mode="online")
 
 
 # Device configuration
