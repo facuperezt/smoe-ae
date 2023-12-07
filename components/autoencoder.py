@@ -40,6 +40,23 @@ class MixedActivation(torch.nn.Module):
 
         return x
 
+class ConvBlock(torch.nn.Sequential):
+    def __init__(self, in_channel: int, out_channel: int, ker_size = (3,3), padd = 1, stride = 1, add_batchnorm: bool = True):
+        super(ConvBlock,self).__init__()
+        self.add_module('conv',torch.nn.Conv2d(in_channel ,out_channel,kernel_size=ker_size,stride=stride,padding=padd)),
+        if add_batchnorm:
+            self.add_module('norm',torch.nn.BatchNorm2d(out_channel)),
+        self.add_module('LeakyRelu',torch.nn.LeakyReLU(0.2, inplace=True))
+
+class LinearBlock(torch.nn.Sequential):
+    def __init__(self, in_features, out_features, add_batchnorm: bool = True, dropout: float = 0.35):
+        super(LinearBlock,self).__init__()
+        self.add_module('linear',torch.nn.Linear(in_features, out_features, dtype=torch.float32)),
+        if add_batchnorm:
+            self.add_module('norm',torch.nn.BatchNorm1d(out_features)),
+        self.add_module('ReLU',torch.nn.ReLU()),
+        self.add_module('Dropout',torch.nn.Dropout(dropout))
+
 class TorchSMoE_AE(torch.nn.Module):
     def __init__(self, n_kernels: int = 4, block_size: int = 8, n_channels: int = 1, img_size: int = 512, network_architecture: Optional[Dict] = None):
         """
@@ -65,9 +82,7 @@ class TorchSMoE_AE(torch.nn.Module):
             network_architecture["conv"]["channel_sizes"][1:],
             network_architecture["conv"]["channel_sizes"][:-1]
             ):
-            conv_layers.append(torch.nn.Conv2d(in_channels, out_channels, kernel_size=(3,3), padding=1, dtype=torch.float32))
-            conv_layers.append(torch.nn.BatchNorm2d(out_channels))
-            conv_layers.append(torch.nn.LeakyReLU())
+            conv_layers.append(ConvBlock(in_channels, out_channels, ker_size=(3,3), padd=1, add_batchnorm=True))
         conv_layers.append(torch.nn.Flatten())
 
         ### Dense layers ###
@@ -76,10 +91,7 @@ class TorchSMoE_AE(torch.nn.Module):
             network_architecture["lin"]["feature_sizes"][1:],
             network_architecture["lin"]["feature_sizes"][:-1]
             ):
-            means_dense_layers.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
-            means_dense_layers.append(torch.nn.BatchNorm1d(out_features))
-            means_dense_layers.append(torch.nn.ReLU())
-            means_dense_layers.append(torch.nn.Dropout(0.35))
+            means_dense_layers.append(LinearBlock(in_features, out_features), add_batchnorm=True, dropout=0.35)
 
         ### SMoE layers ###
         fc_smoe_descriptions = []
@@ -87,11 +99,9 @@ class TorchSMoE_AE(torch.nn.Module):
             network_architecture["smoe"]["feature_sizes"][1:],
             network_architecture["smoe"]["feature_sizes"][:-1]
             ):
-            fc_smoe_descriptions.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
-            fc_smoe_descriptions.append(torch.nn.ReLU())
-            fc_smoe_descriptions.append(torch.nn.Dropout(0.35))
+            fc_smoe_descriptions.append(LinearBlock(in_features, out_features, add_batchnorm=False, dropout=0.35))
         fc_smoe_descriptions.append(torch.nn.Linear(network_architecture["smoe"]["feature_sizes"][-1], 3*n_kernels + n_kernels**2, dtype=torch.float32))
-        fc_smoe_descriptions.append(MixedActivation(n_kernels))
+        fc_smoe_descriptions.append(MixedActivation(n_kernels))  # Final output corresponds to the postition, weight and variance of each
 
         ### Combiner layers ###
         fc_global_infos = []
@@ -99,11 +109,9 @@ class TorchSMoE_AE(torch.nn.Module):
             network_architecture["combiner"]["feature_sizes"][1:],
             network_architecture["combiner"]["feature_sizes"][:-1]
             ):
-            fc_global_infos.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
-            fc_global_infos.append(torch.nn.LeakyReLU())
-            fc_global_infos.append(torch.nn.Dropout(0.35))
+            fc_global_infos.append(LinearBlock(in_features, out_features, add_batchnorm=False, dropout=0.35))
         fc_global_infos.append(torch.nn.Linear(network_architecture["combiner"]["feature_sizes"][-1], 3*n_kernels + n_kernels**2, dtype=torch.float32))
-        fc_global_infos.append(torch.nn.Tanh())
+        fc_global_infos.append(torch.nn.Tanh())  # This output corresponds to an internal representation of the blocks learned by the autoencoder
 
         self.conv = torch.nn.Sequential(*conv_layers)
         self.lin = torch.nn.Sequential(*means_dense_layers)
