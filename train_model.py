@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import wandb  # Add this import
-from models import Asereje
+from models import Asereje, AserejeOnlyE2E
 import argparse
 from data import DataLoader
 from utils import flatten_dict, sum_nested_dicts
@@ -15,7 +15,7 @@ from torch.optim.lr_scheduler import ExponentialLR
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
 parser.add_argument("--lr", default=1e-3, type=float, help="Learning rate for optimizer")
-parser.add_argument("--batch_size", default=-10, type=int, help="Batch size for training")
+parser.add_argument("--batch_size", default=-10, type=int, help="Batch size for training. Positive values are absolute, negative values are relative to the dataset size.")
 args, unknown = parser.parse_known_args()
 
 # Initialize WandB
@@ -35,7 +35,7 @@ train_loader = DataLoader()
 train_loader.initialize()
 
 # Define your model
-model = Asereje("models/config_files/base_config.json", device=device)
+model = AserejeOnlyE2E("models/config_files/base_config.json", device=device)
 model: nn.Module
 
 if args.model_path is not None:
@@ -46,9 +46,9 @@ if args.model_path is not None:
 criterion = model.loss
 
 # Define your optimizer
-optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-3)
 num_epochs = 100
-scheduler = ExponentialLR(optimizer, gamma=0.955)
+scheduler = ExponentialLR(optimizer, gamma=0.98)
 
 historic_loss = []
 

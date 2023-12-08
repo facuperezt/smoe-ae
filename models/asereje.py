@@ -49,3 +49,18 @@ class AserejePipeline(torch.nn.Module):
     def visualize_output(self, img: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1.) -> None:
         img = img.cpu().detach().numpy()
         plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+
+
+class AserejeOnlyE2E(AserejePipeline):
+    def __init__(self, config_file_path: str, device: torch.device = torch.device('cpu')):
+        super().__init__(config_file_path, device)
+        if "blockwise_loss_function" in self.cfg.keys():
+            print("WARNING: 'blockwise_loss_function' is not used in this model.")
+
+    def loss(self, x, y, return_separate_losses: bool = False):
+        if return_separate_losses:
+            return {
+                "e2e_loss": self.loss_function(x, y),
+                }
+        else:
+            return {"e2e_loss": sum(self.loss_function(x, y).values())}
