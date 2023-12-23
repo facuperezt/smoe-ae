@@ -78,38 +78,45 @@ class TorchSMoE_AE(torch.nn.Module):
         
         ### Convolutional layers ###
         conv_layers = []
+        _batchnorm = network_architecture["conv"]["add_batchnorm"]
         for out_channels, in_channels in zip(
             network_architecture["conv"]["channel_sizes"][1:],
             network_architecture["conv"]["channel_sizes"][:-1]
             ):
-            conv_layers.append(ConvBlock(in_channels, out_channels, ker_size=(3,3), padd=1, add_batchnorm=True))
+            conv_layers.append(ConvBlock(in_channels, out_channels, ker_size=(3,3), padd=1, add_batchnorm=_batchnorm))
         conv_layers.append(torch.nn.Flatten())
 
         ### Dense layers ###
         means_dense_layers = []
+        _batchnorm = network_architecture["lin"]["add_batchnorm"] if "add_batchnorm" in network_architecture["lin"].keys() else False
+        _dropout = network_architecture["lin"]["dropout"] if "dropout" in network_architecture["lin"].keys() else 0.35
         for out_features, in_features in zip(
             network_architecture["lin"]["feature_sizes"][1:],
             network_architecture["lin"]["feature_sizes"][:-1]
             ):
-            means_dense_layers.append(LinearBlock(in_features, out_features, add_batchnorm=True, dropout=0.35))
+            means_dense_layers.append(LinearBlock(in_features, out_features, add_batchnorm=_batchnorm, dropout=_dropout))
 
         ### SMoE layers ###
         fc_smoe_descriptions = []
+        _batchnorm = network_architecture["smoe"]["add_batchnorm"] if "add_batchnorm" in network_architecture["smoe"].keys() else False
+        _dropout = network_architecture["smoe"]["dropout"] if "dropout" in network_architecture["smoe"].keys() else 0.35
         for out_features, in_features in zip(
             network_architecture["smoe"]["feature_sizes"][1:],
             network_architecture["smoe"]["feature_sizes"][:-1]
             ):
-            fc_smoe_descriptions.append(LinearBlock(in_features, out_features, add_batchnorm=False, dropout=0.35))
+            fc_smoe_descriptions.append(LinearBlock(in_features, out_features, add_batchnorm=_batchnorm, dropout=_dropout))
         fc_smoe_descriptions.append(torch.nn.Linear(network_architecture["smoe"]["feature_sizes"][-1], 3*n_kernels + n_kernels**2, dtype=torch.float32))
         fc_smoe_descriptions.append(MixedActivation(n_kernels))  # Final output corresponds to the postition, weight and variance of each
 
         ### Combiner layers ###
         fc_global_infos = []
+        _batchnorm = network_architecture["combiner"]["add_batchnorm"] if "add_batchnorm" in network_architecture["combiner"].keys() else False
+        _dropout = network_architecture["combiner"]["dropout"] if "dropout" in network_architecture["combiner"].keys() else 0.35
         for out_features, in_features in zip(
             network_architecture["combiner"]["feature_sizes"][1:],
             network_architecture["combiner"]["feature_sizes"][:-1]
             ):
-            fc_global_infos.append(LinearBlock(in_features, out_features, add_batchnorm=False, dropout=0.35))
+            fc_global_infos.append(LinearBlock(in_features, out_features, add_batchnorm=_batchnorm, dropout=_dropout))
         fc_global_infos.append(torch.nn.Linear(network_architecture["combiner"]["feature_sizes"][-1], 3*n_kernels + n_kernels**2, dtype=torch.float32))
         fc_global_infos.append(torch.nn.Tanh())  # This output corresponds to an internal representation of the blocks learned by the autoencoder
 

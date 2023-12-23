@@ -19,13 +19,15 @@ def initialize_transforms(img_size: int = 512):
     return transforms
 
 class DataLoader:
+    _dataloader_path = os.path.realpath(__file__).split("dataloader.py")[0]
+
     def __init__(self, img_size: int = 512, block_size: int = 16):
         self.block_size = block_size
         self.transforms = initialize_transforms(img_size)
         self.training_data = []
         self.validation_data = []
-        self.training_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], "train")
-        self.validation_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], "valid")
+        self.training_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], "professional_photos/train")
+        self.validation_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], "professional_photos/valid")
         self.initialized = False
 
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):

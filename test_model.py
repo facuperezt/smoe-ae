@@ -35,13 +35,13 @@ train_loader = DataLoader()
 train_loader.initialize()
 
 # Define your model
-model = Asereje("models/config_files/base_config.json", device=device)
+model = Asereje("models/cfg_files/default_cfg.json", device=device)
 model: nn.Module
 
 with open(args.model_path, "rb") as f:  # If this file doesn't exist, checkout the "with_uploaded_model" branch
     model.load_state_dict(torch.load(f, map_location=device), strict=False)
 
-model.eval()
+model.train()
 # Iterate over the training dataset
 for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5)):
     print(i)

@@ -161,6 +161,7 @@ pip-compile-requirements.txt.*
 __pycache__/
 
 # Ignore training data
+data/
 data/train/
 data/valid/
 data/visualizations/

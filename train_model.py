@@ -1,4 +1,5 @@
 #%%
+import json
 import tqdm
 from typing import Optional
 import torch
@@ -13,19 +14,27 @@ from torch.optim.lr_scheduler import ExponentialLR
 
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
-parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
-parser.add_argument("--lr", default=1e-3, type=float, help="Learning rate for optimizer")
-parser.add_argument("--batch_size", default=-10, type=int, help="Batch size for training. Positive values are absolute, negative values are relative to the dataset size.")
+parser.add_argument("--cfg_file_path", default="train_cfg/default_cfg.json", type=str, help="Path to the training cfg file. It contains the model config file path.")
 args, unknown = parser.parse_known_args()
 
+with open(args.cfg_file_path, "r") as f:
+    cfg = json.load(f)
+
+# Data configs
+data_path = cfg["data"]["path"]
+
+# Model configs
+model_cfg_file_path = cfg["model"]["cfg_file_path"]
+model_checkpoint_path = cfg["model"]["checkpoint_path"]
+
 # Initialize WandB
-wandb.init(project="SMoE with funky encoder", name="With Block-wise Loss and BatchNorm", mode="online")
+wandb.init(project="SMoE with funky encoder", name="With Block-wise Loss and BatchNorm", mode="online" if cfg["wandb"] else "disabled")
 
 
 # Device configuration
-if torch.backends.mps.is_available():
+if torch.backends.mps.is_available() and cfg["gpu"]:
     device = torch.device('mps')
-elif torch.cuda.is_available():
+elif torch.cuda.is_available() and cfg["gpu"]:
     device = torch.device('cuda')
 else:
     device = torch.device('cpu')
@@ -35,11 +44,11 @@ train_loader = DataLoader()
 train_loader.initialize()
 
 # Define your model
-model = AserejeOnlyE2E("models/config_files/base_config.json", device=device)
+model = AserejeOnlyE2E(model_cfg_file_path, device=device)
 model: nn.Module
-
-if args.model_path is not None:
-    with open(args.model_path, "rb") as f:
+#%%
+if model_checkpoint_path is not None:
+    with open(model_checkpoint_path, "rb") as f:
         model.load_state_dict(torch.load(f, map_location=device), strict=False)
 
 # Define your loss function
@@ -86,7 +95,7 @@ for epoch in range(num_epochs):
         optimizer.step()
         print("Mean Loss: ", total_loss_mean)
         # Log the loss for this epoch to WandB
-        wandb.log(flatten_dict({"Losses": loss, "Total Loss": total_loss}))
+        wandb.log(flatten_dict({"Losses": loss, "Total Loss": total_loss, "Learning Rate": scheduler.get_last_lr()[0]}), step=epoch*nr_batches + i)
 
     scheduler.step()
     # Save the model if the loss is lower than the historic loss

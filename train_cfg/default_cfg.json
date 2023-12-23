@@ -1,0 +1,19 @@
+{
+  "gpu": false,
+  "wandb": false,
+  "optimizer": {
+    "name": "AdamW",
+    "lr": 0.001,
+    "weight_decay": 0.01
+  },
+  "batch_size": -10,
+  "num_epochs": 100,
+  "model": {
+    "cfg_file_path": "models/cfg_files/default_cfg.json",
+    "checkpoint_path": null
+  },
+  "data": {
+    "name": "profesional_images",
+    "path": "data/train"
+  }
+}
