@@ -40,7 +40,7 @@ else:
     device = torch.device('cpu')
 
 # Define your dataloader
-train_loader = DataLoader()
+train_loader = DataLoader(data_path)
 train_loader.initialize()
 
 # Define your model
@@ -55,9 +55,9 @@ if model_checkpoint_path is not None:
 criterion = model.loss
 
 # Define your optimizer
-optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-3)
+optimizer = optim.AdamW(model.parameters(), lr=cfg["optimizer"]["lr"], weight_decay=cfg["optimizer"]["weight_decay"])
 num_epochs = 100
-scheduler = ExponentialLR(optimizer, gamma=0.98)
+scheduler = ExponentialLR(optimizer, gamma=cfg["scheduler"]["gamma"])
 
 historic_loss = []
 
@@ -66,9 +66,9 @@ for epoch in range(num_epochs):
     # Set model to training mode
     model.train()
 
-    nr_batches = len(train_loader.training_data)//args.batch_size if args.batch_size else 1
+    nr_batches = len(train_loader.training_data)//cfg["batch_size"] if cfg["batch_size"] else 1
     # Iterate over the training dataset
-    for i, (inputs, labels) in tqdm.tqdm(enumerate(train_loader.get(data="train", limit_to=None, batch_size=args.batch_size)), total=nr_batches, desc=f"Epoch {epoch}"):
+    for i, (inputs, labels) in tqdm.tqdm(enumerate(train_loader.get(data="train", limit_to=None, batch_size=cfg["batch_size"])), total=nr_batches, desc=f"Epoch {epoch}"):
         inputs = inputs.to(device)
         labels = labels.to(device)
 

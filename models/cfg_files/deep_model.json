@@ -1,0 +1,78 @@
+{
+    "n_kernels": 4,
+    "block_size": 16,
+    "img_size": 512,
+    "n_channels": 1,
+    "img2block": {
+        "block_size": "$block_size",
+        "img_size": "$img_size"
+    },
+
+    "ae": {
+        "n_kernels": "$n_kernels",
+        "block_size": "$block_size",
+        "img_size": "$img_size",
+        "n_channels": "$n_channels",
+        "network_architecture": {
+            "conv": {
+                "channel_sizes": [8, 32, 32, 128, 128, 512, 512, 1024],
+                "add_batchnorm": true,
+                "dropout": 0.0
+            },
+            "lin": {
+                "feature_sizes": [1024, 512, 256, 128, 128, 128, 128],
+                "add_batchnorm": true,
+                "dropout": 0.5
+            },
+            "smoe": {
+                "feature_sizes": [64, 32],
+                "add_batchnorm": false,
+                "dropout": 0.35
+            },
+            "combiner": {
+                "feature_sizes": [64, 32],
+                "add_batchnorm": false,
+                "dropout": 0.35
+            }
+        }
+    },
+
+    "positional_encoding": {
+        "channels": "$n_channels"
+    },
+    "global_mean_optimizer": {
+        "n_kernels": "$n_kernels",
+        "block_size": "$block_size",
+        "img_size": "$img_size",
+        "n_channels": "$n_channels",
+            "network_architecture": null
+        },
+
+    "smoe": {
+        "n_kernels": "$n_kernels",
+        "block_size": "$block_size"
+    },
+
+    "block2img": {
+        "block_size": "$block_size",
+        "img_size": "$img_size"
+    },
+
+    "loss_function": {
+        "loss_type": "l1_l2",
+        "alpha": 0.8,
+        "beta": 0.7
+    },
+
+    "blockwise_loss_function": {
+        "loss_type": "l1_l2",
+        "alpha": 0.8,
+        "beta": 0.7,
+        "ssim_args": {
+            "data_range": 1.0
+        },
+        "ms_ssim_args": {
+            "data_range": 1.0
+        }
+    }
+}

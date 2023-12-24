@@ -3,14 +3,13 @@ from matplotlib import pyplot as plt
 import torch
 from components import TorchSMoE_SMoE as SMoE, OffsetBlock, GlobalMeanOptimizer, TorchSMoE_AE as AE,\
         Img2Block, Block2Img, MixedLossFunction, PositionalEncodingPermute1D as PositionalEncoding
-
+from .cfg_file_parser import parse_cfg_file
 
 
 class AserejePipeline(torch.nn.Module):
     def __init__(self, config_file_path: str, device: torch.device = torch.device('cpu')):
         super().__init__()
-        with open(config_file_path, "r") as f:
-            self.cfg = json.load(f)
+        self.cfg = parse_cfg_file(config_file_path)
         self.img2block = Img2Block(**self.cfg['img2block']).to(device)
         self.ae = AE(**self.cfg['ae']).to(device)
         self.positional_encoding = PositionalEncoding(**self.cfg['positional_encoding']).to(device)

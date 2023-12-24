@@ -160,6 +160,9 @@ pip-compile-requirements.txt.*
 # Ignore pycache
 __pycache__/
 
+# Ignore WandB stuff
+wandb/
+
 # Ignore training data
 data/
 data/train/
