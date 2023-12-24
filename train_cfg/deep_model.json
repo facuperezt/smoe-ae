@@ -3,16 +3,16 @@
   "wandb": true,
   "optimizer": {
     "name": "AdamW",
-    "lr": 0.001,
+    "lr": 1e-4,
     "weight_decay": 0.01
   },
   "scheduler": {
     "gamma": 0.98
   },
   "batch_size": -10,
-  "num_epochs": 100,
+  "num_epochs": 1000,
   "model": {
-    "cfg_file_path": "models/cfg_files/default_cfg.json",
+    "cfg_file_path": "models/cfg_files/deep_model.json",
     "checkpoint_path": null
   },
   "data": {
