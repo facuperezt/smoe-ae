@@ -95,7 +95,7 @@ for epoch in range(num_epochs):
         optimizer.step()
         print("Mean Loss: ", total_loss_mean)
         # Log the loss for this epoch to WandB
-        wandb.log(flatten_dict({"Losses": loss, "Total Loss": total_loss, "Learning Rate": scheduler.get_last_lr()[0]}), step=epoch*nr_batches + i)
+        wandb.log(flatten_dict({"Losses": loss, "Total Loss": total_loss, "Learning Rate": scheduler.get_last_lr()[0]}))
 
     scheduler.step()
     # Save the model if the loss is lower than the historic loss
