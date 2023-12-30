@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import torch
 from components import TorchSMoE_SMoE as SMoE, OffsetBlock, GlobalMeanOptimizer, TorchSMoE_AE as AE,\
         Img2Block, Block2Img, MixedLossFunction, PositionalEncodingPermute1D as PositionalEncoding
+
 from .cfg_file_parser import parse_cfg_file
 
 
@@ -46,8 +47,15 @@ class AserejePipeline(torch.nn.Module):
         return {"e2e_loss": sum(self.loss_function(x, y).values()), "blockwise_loss": sum(self.blockwise_loss_function(self.x_smoe_reconst, self.x_blocked).values())}
     
     def visualize_output(self, img: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1.) -> None:
-        img = img.cpu().detach().numpy()
-        plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+        try:
+            imgs = iter(img)
+        except TypeError:
+            img = img.cpu().detach().numpy()
+            plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+        else:
+            print("Too many images to visualize, only the first one will be shown.")
+            img = img[0].cpu().detach().numpy()
+            plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax) 
 
 
 class AserejeOnlyE2E(AserejePipeline):

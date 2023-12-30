@@ -1,8 +1,10 @@
+import json
+import pickle
 from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from models import Asereje
+from models import Asereje, ElviraModel
 from data import DataLoader
 import argparse
 from utils import flatten_dict, sum_nested_dicts
@@ -10,9 +12,12 @@ from utils import flatten_dict, sum_nested_dicts
 
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
-parser.add_argument("--model_path", default=None, type=str, help="Path to the model file")
+parser.add_argument("--cfg_file_path", default="train_cfg/default_cfg.json", type=str, help="Path to the training cfg file. It contains the model config file path.")
 parser.add_argument("--save", action="store_true", help="Saves the results")
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
+
+with open(args.cfg_file_path, "r") as f:
+    cfg = json.load(f)
 
 def set_title(ax: plt.Axes, title: str) -> None:
     plt.sca(ax)
@@ -29,27 +34,33 @@ elif torch.cuda.is_available():
     device = torch.device('cuda')
 else:
     device = torch.device('cpu')
-
+device = torch.device('cpu')
 # Define your dataloader
-train_loader = DataLoader()
+train_loader = DataLoader(cfg["data"]["path"])
 train_loader.initialize()
 
 # Define your model
-model = Asereje("models/cfg_files/default_cfg.json", device=device)
+model = ElviraModel(config_file_path=cfg["model"]["cfg_file_path"], device=device)
 model: nn.Module
 
-with open(args.model_path, "rb") as f:  # If this file doesn't exist, checkout the "with_uploaded_model" branch
-    model.load_state_dict(torch.load(f, map_location=device), strict=False)
+model_checkpoint_path = cfg.get("model", {}).get("checkpoint_path")
+if model_checkpoint_path is not None:
+    print("Loading Checkpoint...")
+    with open(model_checkpoint_path, "rb") as f:
+        model.load_state_dict(torch.load(f, map_location=device), strict=False)
 
-model.train()
+model.eval()
 # Iterate over the training dataset
 for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5)):
     print(i)
     inputs = inputs.to(device)
     labels = labels.to(device)
+    with open("data/elvira/images/blocked/8x8/baboon.pckl", "rb") as f:
+        img = pickle.load(f)["block"]
+        img = torch.tensor(img).float()[:, None, :, :]
     outputs = model(inputs)
     loss = model.loss(outputs, labels, return_separate_losses=True)
-    print(sum_nested_dicts(loss["e2e_loss"]).item(), sum_nested_dicts(loss["blockwise_loss"]).item())
+    # print(sum_nested_dicts(loss["e2e_loss"]).item(), sum_nested_dicts(loss["blockwise_loss"]).item())
     fig, axs = plt.subplots(3,2, figsize=(7,8))
     set_title(axs[0][0], "Original")
     model.visualize_output(inputs[0])
@@ -61,12 +72,12 @@ for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5))
     set_title(axs[1][1], "End-to-End L2 Loss")
     _l2 = loss["e2e_loss"]["l2_loss"].squeeze()
     model.visualize_output(_l2, vmin=_l2.min(), vmax=_l2.max())
-    set_title(axs[2][0], "Blockwise L1 Loss")
-    _l1 = loss["blockwise_loss"]["l1_loss"].squeeze()
-    model.visualize_output(_l1, vmin=_l1.min(), vmax=_l1.max())
-    set_title(axs[2][1], "Blockwise L2 Loss")
-    _l2 = loss["blockwise_loss"]["l2_loss"].squeeze()
-    model.visualize_output(_l2, vmin=_l2.min(), vmax=_l2.max())
+    # set_title(axs[2][0], "Blockwise L1 Loss")
+    # _l1 = loss["blockwise_loss"]["l1_loss"].squeeze()
+    # model.visualize_output(_l1, vmin=_l1.min(), vmax=_l1.max())
+    # set_title(axs[2][1], "Blockwise L2 Loss")
+    # _l2 = loss["blockwise_loss"]["l2_loss"].squeeze()
+    # model.visualize_output(_l2, vmin=_l2.min(), vmax=_l2.max())
 
     if args.save:
         with open(f"data/visualizations/reconstruction_losses/A/with_blockwise_optimization/{i}.png", "wb") as f:

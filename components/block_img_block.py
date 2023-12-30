@@ -22,7 +22,7 @@ class BlockImgBlock(torch.nn.Module):
                 sliding_window(np.asarray(img_input.detach().squeeze().cpu()), 2*[self.block_size], 2*[self.block_size], False),
                 requires_grad=self.require_grad,
                 dtype=torch.float32,
-            ).flatten(0, 1).to(device)
+            ).flatten(0, -3).to(device)
 
     def blocks_to_img(self, blocked_input: torch.Tensor) -> torch.Tensor:
         reshape_size = (int(self.img_size/self.block_size), int(self.img_size/self.block_size), self.block_size, self.block_size)

@@ -1,10 +1,14 @@
 from dataclasses import dataclass, field
 import enum
+import pickle
 from typing import Optional, List, Union, Dict
 import torch
+from .elvira_helpers import PermuteAndFlatten, TorchSMoE_clipper
+
 
 __all__ = [
-    'TorchSMoE_AE'
+    'TorchSMoE_AE',
+    'TorchSMoE_AE_Elvira',
 ]
 
 _base_network_architecture = {
@@ -56,6 +60,59 @@ class LinearBlock(torch.nn.Sequential):
             self.add_module('norm',torch.nn.BatchNorm1d(out_features)),
         self.add_module('ReLU',torch.nn.ReLU()),
         self.add_module('Dropout',torch.nn.Dropout(dropout))
+
+
+class TorchSMoE_AE_Elvira(torch.nn.Module):
+    def __init__(self, n_kernels: int = 4, block_size: int = 8, load_tf_model: bool = False, **kwargs):
+        """
+        Initializes the Conv2d and Linear (Dense in tensorflow) layers according to AE_SMoE paper.
+        """
+        super().__init__()
+        conv_layers = []
+        for out_channels, in_channels in zip([16, 32, 64, 128, 256, 512, 1024], [1, 16, 32, 64, 128, 256, 512]):
+            conv_layers.append(torch.nn.Conv2d(in_channels, out_channels, kernel_size=(3,3), padding=1, dtype=torch.float32))
+            conv_layers.append(torch.nn.ReLU())
+        conv_layers.append(PermuteAndFlatten())
+        dense_layers = []
+        for out_features, in_features in zip([1024, 512, 256, 128, 64], [1024*block_size**2, 1024, 512, 256, 128]):
+            dense_layers.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
+            dense_layers.append(torch.nn.ReLU())
+        dense_layers.append(torch.nn.Linear(64, 28, dtype=torch.float32))
+        # dense_layers.append(MixedActivation(n_kernels))
+
+        self.conv = torch.nn.Sequential(*conv_layers)
+        self.lin = torch.nn.Sequential(*dense_layers)
+
+        if load_tf_model:
+            self.load_from_tf_smoe(f"models/saves/elvira_checkpoints/tf_smoe_weights_and_biases_{block_size}x{block_size}.pkl")
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if len(x.shape) == 3:
+            x = x.unsqueeze(1)
+        x = self.conv(x)
+        # for conv in self.conv:
+        #     x = conv(x)
+        x = self.lin(x)
+        # for lin in self.lin:
+        #     x = lin(x)
+        return x
+
+    def load_from_tf_smoe(self, path_to_pkl: str) -> None:
+        with open(path_to_pkl, "rb") as f:
+            d = pickle.load(f)
+        conv = d["conv"]
+        lin = d["lin"]
+
+        for layer, wandb in zip(self.conv[::2], conv.values()):
+            weights, biases = wandb["weight"], wandb["bias"]
+            layer.weight.data = weights.clone()
+            layer.bias.data = biases.clone()
+
+        for layer, wandb in zip(self.lin[::2], lin.values()):
+            weights, biases = wandb["weight"], wandb["bias"]
+            layer.weight.data = weights.clone()
+            layer.bias.data = biases.clone()
+
 
 class TorchSMoE_AE(torch.nn.Module):
     def __init__(self, n_kernels: int = 4, block_size: int = 8, n_channels: int = 1, img_size: int = 512, network_architecture: Optional[Dict] = None):
