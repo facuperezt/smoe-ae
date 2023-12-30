@@ -160,6 +160,8 @@ pip-compile-requirements.txt.*
 # Ignore pycache
 __pycache__/
 
+# Ignore SinGAN results
+SinGAN/results/
 # Ignore WandB stuff
 wandb/
 

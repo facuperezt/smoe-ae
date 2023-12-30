@@ -77,11 +77,11 @@ def main():
     else:
         args.model_name = args.load_model
 
-    makedirs('./logs')
-    makedirs('./results')
+    makedirs('./SinGAN/logs')
+    makedirs('./SinGAN/results')
 
-    args.log_dir = os.path.join('./logs', args.model_name)
-    args.res_dir = os.path.join('./results', args.model_name)
+    args.log_dir = os.path.join('./SinGAN/logs', args.model_name)
+    args.res_dir = os.path.join('./SinGAN/results', args.model_name)
 
     makedirs(args.log_dir)
     makedirs(os.path.join(args.log_dir, 'codes'))
