@@ -80,5 +80,5 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     ax: plt.Axes
     ax.imshow(img)
-    plot_gaussian_contour(mean, cov, ax, alpha=0.4)
+    # plot_gaussian_contour(mean, cov, ax, alpha=0.4)
 # %%
