@@ -7,7 +7,7 @@ import torch.optim as optim
 from models import Asereje, ElviraModel
 from data import DataLoader
 import argparse
-from utils import flatten_dict, sum_nested_dicts
+from utils import flatten_dict, sum_nested_dicts, plot_kernels
 
 
 # Add argparse to load model from a path
@@ -55,9 +55,14 @@ for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5))
     print(i)
     inputs = inputs.to(device)
     labels = labels.to(device)
-    with open("data/elvira/images/blocked/8x8/baboon.pckl", "rb") as f:
+    with open("data/elvira/images/blocked/16x16/baboon.pckl", "rb") as f:
         img = pickle.load(f)["block"]
         img = torch.tensor(img).float()[:, None, :, :]
+    blocks = model.img_to_blocks(inputs)
+    emb = model.clipper(model.ae(blocks))
+    fig, ax = plt.subplots()
+    ax.imshow(blocks[0][0])
+    plot_kernels(emb[0], ax)
     outputs = model(inputs)
     loss = model.loss(outputs, labels, return_separate_losses=True)
     # print(sum_nested_dicts(loss["e2e_loss"]).item(), sum_nested_dicts(loss["blockwise_loss"]).item())

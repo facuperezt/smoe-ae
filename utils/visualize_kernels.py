@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 __all__ = [
-    "plot_gaussian_contour",
+    "plot_kernels",
 ]
 
 # Funtion that upsamples image by factor of n
@@ -17,16 +17,15 @@ def _upsample(img, n):
 
 # Function that plots the one sigma contour of a multivariate gaussian distribution
     
-def plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, color='r', linewidth: int = 10, alpha: float = 1, res: int = 1000):
+def _plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, color='r', linewidth: int = 10, alpha: float = 1, res: int = 1000):
     m_x, m_y = mean
-    (a,b), (_,c) = cov
+    (a,_), (b,c) = cov
     l1 = ((a+c)/2) + (((a-c)/2)**2 + b**2)**0.5
     l2 = ((a+c)/2) - (((a-c)/2)**2 + b**2)**0.5
 
     if l2 < 0:
         print("Invalid Covariance matrix.")
         print(f"{b=}")
-        return
 
     if b == 0 and a >= c:
         phi = 0
@@ -43,6 +42,21 @@ def plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, color
     y += m_y
 
     ax.plot(x,y, color=color, linewidth=linewidth, alpha=alpha)
+
+
+def plot_kernels(smoe_vector: torch.Tensor, ax: plt.Axes, n_kernels: int = 4) -> None:
+    """
+    Plots the kernels of a smoe vector in ax.
+    """
+    smoe_vector = smoe_vector.detach().cpu().numpy()
+    means_x = smoe_vector[:n_kernels]
+    means_y = smoe_vector[n_kernels:2*n_kernels]
+    nus = smoe_vector[2*n_kernels:3*n_kernels]
+    covs = smoe_vector[3*n_kernels:].reshape(-1, 2, 2)
+    covs = np.tril(covs)
+    for mx, my, nu, cov in zip(means_x, means_y, nus, covs):
+        _plot_gaussian_contour(np.array([mx, my]), cov, ax, alpha=nu)
+
 
 if __name__ == "__main__":
     # fig, ax = plt.subplots()

@@ -274,7 +274,7 @@ class ElviraModel(torch.nn.Module):
     
     def img_to_blocks(self, img_input: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
         img_input = img_input.squeeze()
-        return torch.tensor(sliding_window(np.asarray(img_input), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, -3)
+        return torch.tensor(sliding_window(np.asarray(img_input), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, -3).reshape(-1, 1, self.block_size, self.block_size)
 
     def blocks_to_img(self, blocked_input: torch.Tensor) -> torch.Tensor:
         reshape_size = (int(self.img_size/self.block_size), int(self.img_size/self.block_size), self.block_size, self.block_size)

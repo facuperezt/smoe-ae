@@ -16,7 +16,7 @@
     "checkpoint_path": null
   },
   "data": {
-    "name": "profesional_images",
-    "path": "."
+    "name": "professional_images",
+    "path": "./professional_photos"
   }
 }
