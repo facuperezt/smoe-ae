@@ -4,7 +4,7 @@ import torch
 from components import TorchSMoE_SMoE as SMoE, OffsetBlock, GlobalMeanOptimizer, TorchSMoE_AE as AE,\
         Img2Block, Block2Img, MixedLossFunction, PositionalEncodingPermute1D as PositionalEncoding
 
-from .cfg_file_parser import parse_cfg_file
+from utils.cfg_file_parser import parse_cfg_file
 
 
 class AserejePipeline(torch.nn.Module):

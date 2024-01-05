@@ -7,8 +7,9 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.utils as vutils
 import pickle
+import os
 
-from utils import *
+# from utils import *
 
 
 def validateSinGAN(data_loader, networks, stage, args, additional=None):
@@ -25,7 +26,7 @@ def validateSinGAN(data_loader, networks, stage, args, additional=None):
     z_rec = additional['z_rec']
 
     x_in = next(val_it)
-    x_in = x_in.cuda(args.gpu, non_blocking=True)
+    x_in = x_in.to(args.device, non_blocking=True)
     x_org = x_in
 
     x_in = F.interpolate(x_in, (args.size_list[stage], args.size_list[stage]), mode='bilinear', align_corners=True)
@@ -37,7 +38,7 @@ def validateSinGAN(data_loader, networks, stage, args, additional=None):
         x_in_list.append(x_tmp)
 
     for z_idx in range(len(z_rec)):
-        z_rec[z_idx] = z_rec[z_idx].cuda(args.gpu, non_blocking=True)
+        z_rec[z_idx] = z_rec[z_idx].to(args.device, non_blocking=True)
 
     with torch.no_grad():
         x_rec_list = G(z_rec)
@@ -57,7 +58,7 @@ def validateSinGAN(data_loader, networks, stage, args, additional=None):
 
         for k in range(50):
             z_list = [F.pad(rmse_list[z_idx] * torch.randn(args.batch_size, 3, args.size_list[z_idx],
-                                               args.size_list[z_idx]).cuda(args.gpu, non_blocking=True),
+                                               args.size_list[z_idx]).to(args.device, non_blocking=True),
                             [5, 5, 5, 5], value=0) for z_idx in range(stage + 1)]
             x_fake_list = G(z_list)
 

@@ -33,7 +33,7 @@ parser.add_argument('--data_dir', default='data/', help='path to dataset')
 parser.add_argument('--dataset', default='PHOTO', help='type of dataset', choices=['PHOTO'])
 parser.add_argument('--gantype', default='zerogp', help='type of GAN loss', choices=['wgangp', 'zerogp', 'lsgan'])
 parser.add_argument('--model_name', type=str, default='SinGAN', help='model name')
-parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
+parser.add_argument('--workers', default=1, type=int, help='number of data loading workers (default: 8)')
 parser.add_argument('--batch_size', default=1, type=int,
                     help='Total batch size - e.g) num_gpus = 2 , batch_size = 128 then, effectively, 64')
 parser.add_argument('--val_batch', default=1, type=int)
@@ -190,22 +190,22 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.distributed:
                 if args.gpu is not None:
                     print('Distributed to', args.gpu)
-                    torch.cuda.set_device(args.gpu)
-                    networks = [x.cuda(args.gpu) for x in networks]
+                    # torch.cuda.set_device(args.gpu)
+                    networks = [x.to(args.device) for x in networks]
                     args.batch_size = int(args.batch_size / ngpus_per_node)
                     args.workers = int(args.workers / ngpus_per_node)
                     networks = [
                         torch.nn.parallel.DistributedDataParallel(x, device_ids=[args.gpu], output_device=args.gpu) for
                         x in networks]
                 else:
-                    networks = [x.cuda() for x in networks]
+                    networks = [x.to(args.device) for x in networks]
                     networks = [torch.nn.parallel.DistributedDataParallel(x) for x in networks]
 
             elif args.gpu is not None:
-                torch.cuda.set_device(args.gpu)
-                networks = [x.cuda(args.gpu) for x in networks]
+                # torch.cuda.set_device(args.gpu)
+                networks = [x.to(args.device) for x in networks]
             else:
-                networks = [torch.nn.DataParallel(x).cuda() for x in networks]
+                networks = [torch.nn.DataParallel(x).to(args.device) for x in networks]
 
             discriminator, generator, = networks
 
@@ -279,21 +279,21 @@ def main_worker(gpu, ngpus_per_node, args):
         if args.distributed:
             if args.gpu is not None:
                 print('Distributed', args.gpu)
-                torch.cuda.set_device(args.gpu)
-                networks = [x.cuda(args.gpu) for x in networks]
+                # torch.cuda.set_device(args.gpu)
+                networks = [x.to(args.device) for x in networks]
                 args.batch_size = int(args.batch_size / ngpus_per_node)
                 args.workers = int(args.workers / ngpus_per_node)
                 networks = [torch.nn.parallel.DistributedDataParallel(x, device_ids=[args.gpu], output_device=args.gpu)
                             for x in networks]
             else:
-                networks = [x.cuda() for x in networks]
+                networks = [x.to(args.device) for x in networks]
                 networks = [torch.nn.parallel.DistributedDataParallel(x) for x in networks]
 
         elif args.gpu is not None:
-            torch.cuda.set_device(args.gpu)
-            networks = [x.cuda(args.gpu) for x in networks]
+            # torch.cuda.set_device(args.gpu)
+            networks = [x.to(args.device) for x in networks]
         else:
-            networks = [torch.nn.DataParallel(x).cuda() for x in networks]
+            networks = [torch.nn.DataParallel(x).to(args.device) for x in networks]
 
         discriminator, generator, = networks
 

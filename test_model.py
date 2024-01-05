@@ -1,13 +1,14 @@
+#%%
 import json
 import pickle
 from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from models import Asereje, ElviraModel
+from models import Asereje, Elvira2
 from data import DataLoader
 import argparse
-from utils import flatten_dict, sum_nested_dicts, plot_kernels
+from utils import flatten_dict, sum_nested_dicts, plot_kernels, plot_kernel_centers
 
 
 # Add argparse to load model from a path
@@ -40,7 +41,7 @@ train_loader = DataLoader(cfg["data"]["path"])
 train_loader.initialize()
 
 # Define your model
-model = ElviraModel(config_file_path=cfg["model"]["cfg_file_path"], device=device)
+model = Elvira2(config_file_path=cfg["model"]["cfg_file_path"], device=device)
 model: nn.Module
 
 model_checkpoint_path = cfg.get("model", {}).get("checkpoint_path")
@@ -60,9 +61,12 @@ for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5))
         img = torch.tensor(img).float()[:, None, :, :]
     blocks = model.img_to_blocks(inputs)
     emb = model.clipper(model.ae(blocks))
-    fig, ax = plt.subplots()
-    ax.imshow(blocks[0][0])
-    plot_kernels(emb[0], ax)
+    for emb_i, block_i in zip(emb, blocks.squeeze()):
+        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(block_i)
+        plot_kernel_centers(emb_i, ax)
+        plot_kernels(emb_i, ax)
     outputs = model(inputs)
     loss = model.loss(outputs, labels, return_separate_losses=True)
     # print(sum_nested_dicts(loss["e2e_loss"]).item(), sum_nested_dicts(loss["blockwise_loss"]).item())
@@ -70,7 +74,7 @@ for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5))
     set_title(axs[0][0], "Original")
     model.visualize_output(inputs[0])
     set_title(axs[0][1], "Reconstructed")
-    model.visualize_output(outputs[0])
+    model.visualize_output(outputs)
     set_title(axs[1][0], "End-to-End L1 Loss")
     _l1 = loss["e2e_loss"]["l1_loss"].squeeze()
     model.visualize_output(_l1, vmin=_l1.min(), vmax=_l1.max())
@@ -89,3 +93,4 @@ for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5))
             fig.savefig(f, bbox_inches='tight')
     else:
         plt.show()
+# %%

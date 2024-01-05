@@ -2,6 +2,11 @@ import copy
 import json
 from typing import Dict
 
+__all__ = [
+    "parse_cfg_file"
+]
+
+
 def parse_cfg_file(path: str) -> Dict:
     with open(path, "rb") as f:
         unparsed_cfg = json.load(f)

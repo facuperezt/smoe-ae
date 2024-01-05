@@ -6,6 +6,7 @@ from PIL import Image
 
 __all__ = [
     "plot_kernels",
+    "plot_kernel_centers",
 ]
 
 # Funtion that upsamples image by factor of n
@@ -17,7 +18,9 @@ def _upsample(img, n):
 
 # Function that plots the one sigma contour of a multivariate gaussian distribution
     
-def _plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, color='r', linewidth: int = 10, alpha: float = 1, res: int = 1000):
+def _plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, color='r', linewidth: int = 10, alpha: float = 1, res: int = 1000, calls: int = 0) -> None:
+    if calls > 10:
+        return
     m_x, m_y = mean
     (a,_), (b,c) = cov
     l1 = ((a+c)/2) + (((a-c)/2)**2 + b**2)**0.5
@@ -26,6 +29,14 @@ def _plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, colo
     if l2 < 0:
         print("Invalid Covariance matrix.")
         print(f"{b=}")
+        m = min(np.abs(a), np.abs(c))
+        b = np.clip(b, -m, m)
+        b *= 0.99
+        cov = np.array([
+            [a,0],
+            [b,c],
+        ])
+        _plot_gaussian_contour(mean, rectify_covariance_matrix(cov), ax, color=color, linewidth=linewidth, alpha=alpha, res=res, calls=calls+1)
 
     if b == 0 and a >= c:
         phi = 0
@@ -58,6 +69,50 @@ def plot_kernels(smoe_vector: torch.Tensor, ax: plt.Axes, n_kernels: int = 4) ->
         _plot_gaussian_contour(np.array([mx, my]), cov, ax, alpha=nu)
 
 
+def plot_kernel_centers(smoe_vector: torch.Tensor, ax: plt.Axes, n_kernels: int = 4) -> None:
+    """
+    Plots the kernels of a smoe vector in ax.
+    """
+    smoe_vector = smoe_vector.detach().cpu().numpy()
+    means_x = smoe_vector[:n_kernels]
+    means_y = smoe_vector[n_kernels:2*n_kernels]
+    for mx, my in zip(means_x, means_y):
+        ax.scatter(mx, my, color="r", marker="x", s=50)
+
+
+def rectify_covariance_matrix(cov):
+    """
+    Rectify a covariance matrix to ensure it is symmetric and positive semidefinite.
+
+    Parameters:
+    cov (np.array): A covariance matrix that might be invalid.
+
+    Returns:
+    np.array: A rectified, valid covariance matrix.
+    """
+    if (cov[0,0] < 0) and (cov[1,1]) < 0 and (cov[1,0] > 0):
+        cov = -cov
+
+    # Ensure the matrix is symmetric
+    if cov[0,1] == 0:
+        cov[0,1] += cov[1,0]
+        cov_sym = cov
+    else:
+        cov_sym = (cov + cov.T) / 2
+
+    # Perform eigenvalue decomposition
+    eigenvalues, eigenvectors = np.linalg.eigh(cov_sym)
+
+    # Set any negative eigenvalues to a small positive value (e.g., 1e-10)
+    eigenvalues_rectified = np.clip(eigenvalues, 1e-9, None)
+
+    # Reconstruct the matrix
+    cov_rectified = eigenvectors @ np.diag(eigenvalues_rectified) @ eigenvectors.T
+
+    return cov_rectified
+
+
+
 if __name__ == "__main__":
     # fig, ax = plt.subplots()
     # for b in np.arange(-1, 1.1, .02):
@@ -71,14 +126,14 @@ if __name__ == "__main__":
     n = 100
     # img = _upsample(img, n)
     mean = np.array([7.5,7.5])
-    b = -1
+    b = 1
     cov = np.array([
-        [4,b],
-        [b,10],
+        [-4,0],
+        [b,-2],
         ]
     )
     fig, ax = plt.subplots()
     ax: plt.Axes
     ax.imshow(img)
-    # plot_gaussian_contour(mean, cov, ax, alpha=0.4)
+    _plot_gaussian_contour(mean, rectify_covariance_matrix(cov), ax, alpha=0.4)
 # %%

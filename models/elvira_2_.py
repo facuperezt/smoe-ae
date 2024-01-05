@@ -1,52 +1,9 @@
-import torch
-import matplotlib.pyplot as plt
-
-from components import TorchSMoE_AE_Elvira as ElviraAE, TorchSMoE_clipper as Clipper, TorchSMoE_SMoE as SMoE, MixedLossFunction, Img2Block, Block2Img
-
-from utils.cfg_file_parser import parse_cfg_file
-
-# class ElviraModel(torch.nn.Module):
-#     def __init__(self, config_file_path: str, device: torch.device = torch.device("cpu")):
-#         super().__init__()
-#         self.cfg = parse_cfg_file(config_file_path)
-#         self.img2block = Img2Block(**self.cfg['img2block']).to(device)
-#         self.ae = ElviraAE(**self.cfg['ae']).to(device)
-#         self.clipper = Clipper(**self.cfg['clipper']).to(device)
-#         self.smoe = SMoE(**self.cfg['smoe']).to(device)
-#         self.block2img = Block2Img(**self.cfg['block2img']).to(device)
-#         self.loss_function = MixedLossFunction(**self.cfg['loss_function']).to(device)
-
-#     def forward(self, x: torch.Tensor):
-#         x_blocked: torch.Tensor = self.img2block(x)
-#         x_smoe: torch.Tensor
-#         x_smoe = self.ae(x_blocked)
-#         x = self.clipper(x_smoe)
-#         x = self.smoe(x_smoe)
-#         x = self.block2img(x)
-
-#         return x
-    
-#     def loss(self, x, y, return_separate_losses: bool = False):
-#         if return_separate_losses:
-#             return {
-#                 "e2e_loss": self.loss_function(x, y),
-#                 }
-#         else:
-#             return {"e2e_loss": sum(self.loss_function(x, y).values())}
-
-#     def visualize_output(self, img: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1.) -> None:
-#         try:
-#             imgs = iter(img)
-#         except TypeError:
-#             img = img.cpu().detach().numpy()
-#             plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
-#         else:
-#             print("Too many images to visualize, only the first one will be shown.")
-#             img = img[0].cpu().detach().numpy()
-#             plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax) 
-
-import itertools
+#%%
+import json
+import sys
 import os
+sys.path[0] = os.path.join(sys.path[0], "..")
+import itertools
 import pickle
 from typing import Union
 from PIL import Image
@@ -54,7 +11,9 @@ from PIL import Image
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import sliding_window
+
+from utils import sliding_window, parse_cfg_file
+from components import MixedLossFunction
 
 class PermuteAndFlatten(torch.nn.Module):
     """
@@ -115,7 +74,7 @@ class TorchSMoE_AE(torch.nn.Module):
         self.lin = torch.nn.Sequential(*dense_layers)
 
         if load_tf_model:
-            self.load_from_tf_smoe(f"saved_weights/tf_smoe_weights_and_biases_{block_size}x{block_size}.pkl")
+            self.load_from_tf_smoe(f"models/saves/elvira_checkpoints/tf_smoe_weights_and_biases_{block_size}x{block_size}.pkl")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if len(x.shape) == 3:
@@ -251,8 +210,8 @@ class TorchSMoE_SMoE(torch.nn.Module):
 
         return res
     
-class ElviraModel(torch.nn.Module):
-    def __init__(self, img_size: int = 512, n_kernels: int = 4, block_size: int = 16, load_tf_model: bool = False, **kwargs):
+class TorchSMoE(torch.nn.Module):
+    def __init__(self, img_size: int = 512, n_kernels: int = 4, block_size: int = 8, load_tf_model: bool = False):
         super().__init__()
         self.img_size = img_size
         self.n_kernels = n_kernels
@@ -262,25 +221,96 @@ class ElviraModel(torch.nn.Module):
         self.smoe = TorchSMoE_SMoE(n_kernels=n_kernels, block_size=block_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.img_to_blocks(x)
+        if x.squeeze().ndim == 2:
+            x = self.img_to_blocks(x)
         x = self.ae(x)
         x = self.clipper(x)
         # x = x.to(torch.device("cpu"))
         x = self.smoe(x)
-        if len(x.shape) == 3:
-            x = x[:, None, :, :]
         x = self.blocks_to_img(x)
         return x
     
     def img_to_blocks(self, img_input: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
-        img_input = img_input.squeeze()
-        return torch.tensor(sliding_window(np.asarray(img_input), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, -3).reshape(-1, 1, self.block_size, self.block_size)
+        return torch.tensor(sliding_window(np.asarray(img_input).squeeze(), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, -3).reshape(-1, 1, self.block_size, self.block_size)
 
     def blocks_to_img(self, blocked_input: torch.Tensor) -> torch.Tensor:
         reshape_size = (int(self.img_size/self.block_size), int(self.img_size/self.block_size), self.block_size, self.block_size)
         return blocked_input.reshape(reshape_size).permute(0, 2, 1, 3).reshape(self.img_size, self.img_size)
 
     def visualize_output(self, blocked_output: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1.) -> None:
-        img = self.blocks_to_img(blocked_output).detach().numpy()
+        if blocked_output.squeeze().ndim > 2:
+            img = self.blocks_to_img(blocked_output).detach().numpy()
+        else:
+            img = blocked_output.squeeze().detach().numpy()
         plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
-    
+
+
+class Elvira2(TorchSMoE):
+    def __init__(self, config_file_path: str, device: torch.device = torch.device("cpu")):
+        cfg = parse_cfg_file(config_file_path)
+        super().__init__(img_size=cfg["ae"]["img_size"], n_kernels=cfg["ae"]["n_kernels"], block_size=cfg["ae"]["block_size"], load_tf_model=cfg["ae"]["load_tf_model"])
+        self.cfg = cfg
+        self.device = device
+        self.to(device)
+        self.loss_function = MixedLossFunction(**self.cfg['loss_function']).to(device)
+
+    def loss(self, x, y, return_separate_losses: bool = False):
+        if return_separate_losses:
+            return {
+                "e2e_loss": self.loss_function(x, y),
+                }
+        else:
+            return {"e2e_loss": sum(self.loss_function(x, y).values())}
+
+if __name__ == "__main__":
+    g = []
+    block_size = 16
+    n_kernels = 4
+    tsmoe = TorchSMoE(n_kernels=n_kernels, block_size=block_size, load_tf_model=True)
+    tsmoe.eval()
+    valid_path = f"./data/professional_photos/valid/"
+    for pic in os.listdir(valid_path):
+        with open(f"data/elvira/images/blocked/{block_size}x{block_size}/lena.pckl", "rb") as f:
+            blocked_img = pickle.load(f)["block"]
+            blocked_img = torch.tensor(blocked_img).float()[:, None, :, :]
+        # img = Image.open(os.path.join(valid_path, pic)).convert('L')
+        # img = torch.tensor(np.asarray(img))[:512, :512]/255.
+        # img = tsmoe.img_to_blocks(img)[:, None, :, :]
+        full_img = tsmoe.blocks_to_img(blocked_img)
+        re_blocked_img = tsmoe.img_to_blocks(full_img)
+        for rbi, bi in zip(re_blocked_img, blocked_img):
+            if not torch.allclose(rbi, bi):
+                print("Not equal")
+                print(rbi)
+                print(bi)
+                break
+        out = tsmoe(blocked_img)
+        tsmoe.visualize_output(out,)
+        plt.show()
+        break
+    # for block_size in [8, 16]:
+    #     test_path=f'./images/blocked/{block_size}x{block_size}/'
+    #     for (dirpath, dirnames, filenames) in os.walk(test_path):
+    #         g.extend(filenames)
+    #         break
+
+    #     tsmoe = TorchSMoE(n_kernels=n_kernels, block_size=block_size, load_tf_model=True)
+    #     #Go through all 4 testimages
+    #     for i in range(4):
+    #         filename = g[i]
+    #         data = pickle.load(open(test_path + filename, "rb"))
+    #         # mask_test=data.get('mask').tolist()
+    #         block_test = data.get('block').tolist()
+    #         for perm in itertools.permutations([0,1,2,3]):
+    #         #     plt.figure()
+    #         #     plt.title(perm)
+    #         #     tsmoe.visualize_output(torch.tensor(block_test))
+    #         #     break
+    #             tsmoe.visualize_output(tsmoe.img_to_blocks(tsmoe.blocks_to_img(torch.tensor(block_test))))
+    #         # break
+    #         test_image_array = torch.asarray(block_test)[:, None, :, :]
+    #         # print(test_image_array.shape)
+    #         out = tsmoe(test_image_array)
+    #         tsmoe.visualize_output(out)
+    #         break
+# %%
