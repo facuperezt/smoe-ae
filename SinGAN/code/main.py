@@ -20,7 +20,7 @@ import torch.multiprocessing as mp
 import torch.utils.data
 import torch.utils.data.distributed
 
-from models.generator import Generator
+from models.generator_compressor import GeneratorWithCompression
 from models.discriminator import Discriminator
 
 from train import trainSinGAN
@@ -89,12 +89,12 @@ def main():
     makedirs(args.res_dir)
 
     if args.load_model is None:
-        pyfiles = glob("./*.py")
-        modelfiles = glob('./models/*.py')
+        pyfiles = glob(f"{os.path.split(os.path.relpath(__file__))[0]}/*.py")
+        modelfiles = glob(f"{os.path.split(os.path.relpath(__file__))[0]}/models/*.py")
         for py in pyfiles:
-            copyfile(py, os.path.join(args.log_dir, 'codes') + "/" + py)
+            copyfile(py, os.path.join(args.log_dir, 'codes') + "/" + py.split("/")[-1])
         for py in modelfiles:
-            copyfile(py, os.path.join(args.log_dir, 'codes', py[2:]))
+            copyfile(py, os.path.join(args.log_dir, 'codes', *py.split("/")[-2:]))
 
     formatted_print('Total Number of GPUs:', ngpus_per_node)
     formatted_print('Total Number of Workers:', args.workers)
@@ -137,7 +137,7 @@ def main_worker(gpu, ngpus_per_node, args):
     args.size_list = [int(args.img_size_min * scale_factor**i) for i in range(args.num_scale + 1)]
 
     discriminator = Discriminator()
-    generator = Generator(args.img_size_min, args.num_scale, scale_factor)
+    generator = GeneratorWithCompression(args.img_size_min, args.num_scale, scale_factor)
 
     networks = [discriminator, generator]
 

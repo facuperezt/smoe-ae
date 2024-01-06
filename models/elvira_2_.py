@@ -221,6 +221,7 @@ class TorchSMoE(torch.nn.Module):
         self.smoe = TorchSMoE_SMoE(n_kernels=n_kernels, block_size=block_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x_shape = x.shape
         if x.squeeze().ndim == 2:
             x = self.img_to_blocks(x)
         x = self.ae(x)
@@ -228,6 +229,7 @@ class TorchSMoE(torch.nn.Module):
         # x = x.to(torch.device("cpu"))
         x = self.smoe(x)
         x = self.blocks_to_img(x)
+        x = x.view(x_shape)
         return x
     
     def img_to_blocks(self, img_input: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
@@ -261,6 +263,19 @@ class Elvira2(TorchSMoE):
                 }
         else:
             return {"e2e_loss": sum(self.loss_function(x, y).values())}
+        
+    def embed_artifacts(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Input is a tensor of shape (n, 1, w, h)
+        Output is a tensor of shape (n, 1, w, h)
+        """
+        w, h = x.shape[-2:]
+        if (w, h) != (self.img_size, self.img_size):
+            x = torch.nn.functional.interpolate(x, (self.img_size, self.img_size), mode='bilinear', align_corners=True)
+        y = self.forward(x)
+        if (w, h) != (self.img_size, self.img_size):
+            y = torch.nn.functional.interpolate(y, (w, h), mode='bilinear', align_corners=True)
+        return y
 
 if __name__ == "__main__":
     g = []

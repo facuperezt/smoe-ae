@@ -2,6 +2,7 @@
 import json
 import pickle
 from matplotlib import pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,6 +11,7 @@ from data import DataLoader
 import argparse
 from utils import flatten_dict, sum_nested_dicts, plot_kernels, plot_kernel_centers
 
+from PIL import Image
 
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
@@ -51,6 +53,10 @@ if model_checkpoint_path is not None:
         model.load_state_dict(torch.load(f, map_location=device), strict=False)
 
 model.eval()
+img = Image.open("data/professional_photos/train/ali-inay-2273.png").convert("L")
+img_arr = torch.tensor(np.asarray(img)[None, None, :, :]).float()/255
+out = model.embed_artifacts(img_arr)
+print(out.shape)
 # Iterate over the training dataset
 for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5)):
     print(i)
