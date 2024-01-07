@@ -20,13 +20,15 @@ import torch.multiprocessing as mp
 import torch.utils.data
 import torch.utils.data.distributed
 
-from models.generator_compressor import GeneratorWithCompression
-from models.discriminator import Discriminator
+
+from singan_models.generator_compressor import GeneratorWithCompression
+from singan_models.discriminator import Discriminator
+
+from singan_utils import makedirs, get_torch_device, formatted_print, save_checkpoint
 
 from train import trainSinGAN
 from validation import validateSinGAN
 
-from utils import makedirs, get_torch_device, formatted_print, save_checkpoint
 
 parser = argparse.ArgumentParser(description='PyTorch Simultaneous Training')
 parser.add_argument('--data_dir', default='data/', help='path to dataset')
@@ -131,7 +133,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # Define model #
     ################
     # 4/3 : scale factor in the paper
-    scale_factor = 4/3
+    scale_factor = 6/3
     tmp_scale = args.img_size_max / args.img_size_min
     args.num_scale = int(np.round(np.log(tmp_scale) / np.log(scale_factor)))
     args.size_list = [int(args.img_size_min * scale_factor**i) for i in range(args.num_scale + 1)]

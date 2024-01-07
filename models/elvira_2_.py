@@ -2,11 +2,11 @@
 import json
 import sys
 import os
-sys.path[0] = os.path.join(sys.path[0], "..")
 import itertools
 import pickle
 from typing import Union
 from PIL import Image
+import cv2
 
 import torch
 import numpy as np
@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 from utils import sliding_window, parse_cfg_file
 from components import MixedLossFunction
+
 
 class PermuteAndFlatten(torch.nn.Module):
     """
@@ -224,9 +225,10 @@ class TorchSMoE(torch.nn.Module):
         x_shape = x.shape
         if x.squeeze().ndim == 2:
             x = self.img_to_blocks(x)
+        x = x.to(self.ae.conv[0].weight.device)
         x = self.ae(x)
         x = self.clipper(x)
-        # x = x.to(torch.device("cpu"))
+        x = x.to(torch.device("cpu"))
         x = self.smoe(x)
         x = self.blocks_to_img(x)
         x = x.view(x_shape)
@@ -254,6 +256,9 @@ class Elvira2(TorchSMoE):
         self.cfg = cfg
         self.device = device
         self.to(device)
+        self.ae.to(device)
+        self.clipper.to(device)
+        self.smoe.to(device)
         self.loss_function = MixedLossFunction(**self.cfg['loss_function']).to(device)
 
     def loss(self, x, y, return_separate_losses: bool = False):
@@ -266,16 +271,37 @@ class Elvira2(TorchSMoE):
         
     def embed_artifacts(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Input is a tensor of shape (n, 1, w, h)
+        Input is a tensor of shape (n, c, w, h)
         Output is a tensor of shape (n, 1, w, h)
         """
+        x_device = x.device
+        if x.ndim < 3:
+            x = x[None, :, :]
+        if x.ndim < 4:
+            x = x[None, :, :, :]
+
+        # If image is RGB, convert to grayscale using cv2
+        if x.shape[1] == 3:
+            was_rgb = True
+            x = x.permute(0, 2, 3, 1).detach().cpu().numpy()
+            x = np.asarray([cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) for img in x])
+            if x.ndim < 4:
+                x = x[:, :, :, None]
+            x = torch.tensor(x).permute(0, 3, 1, 2).float()
+
         w, h = x.shape[-2:]
         if (w, h) != (self.img_size, self.img_size):
             x = torch.nn.functional.interpolate(x, (self.img_size, self.img_size), mode='bilinear', align_corners=True)
         y = self.forward(x)
         if (w, h) != (self.img_size, self.img_size):
             y = torch.nn.functional.interpolate(y, (w, h), mode='bilinear', align_corners=True)
-        return y
+
+        if was_rgb:
+            y = y.permute(0, 2, 3, 1).detach().cpu().numpy()
+            y = np.asarray([cv2.cvtColor(img, cv2.COLOR_GRAY2RGB) for img in y])
+            y = torch.tensor(y).permute(0, 3, 1, 2).float()
+
+        return y.to(x_device)
 
 if __name__ == "__main__":
     g = []

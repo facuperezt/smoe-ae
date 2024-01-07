@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
-from utils import AverageMeter
+from singan_utils import AverageMeter
 from ops import compute_grad_gp_wgan, compute_grad_gp
 import torchvision.utils as vutils
 
