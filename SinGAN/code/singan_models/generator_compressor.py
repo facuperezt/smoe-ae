@@ -16,7 +16,7 @@ class GeneratorWithCompression(nn.Module):
         self.num_scale = num_scale
         self.nf = 32
         self.current_scale = 0
-        self.compressor = Elvira2(config_file_path="models/cfg_files/elvira_model.json", device=torch.device("mps"))
+        self.compressor = Elvira2(config_file_path="models/cfg_files/elvira_model.json", device=torch.device("cpu"))
         self.size_list = [int(self.img_size_min * scale_factor**i) for i in range(num_scale + 1)]
         print(self.size_list)
 
