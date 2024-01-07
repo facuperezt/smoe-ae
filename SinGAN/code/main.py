@@ -115,10 +115,11 @@ def main():
 
 
 def main_worker(gpu, ngpus_per_node, args):
-    if len(args.gpu) == 1:
-        args.gpu = 0
-    else:
-        args.gpu = gpu
+    if args.gpu is not None:
+        if len(args.gpu) == 1:
+            args.gpu = 0
+        else:
+            args.gpu = gpu
 
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
@@ -143,7 +144,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     networks = [discriminator, generator]
 
-    device = get_torch_device()
+    device = get_torch_device("cpu")
     args.device = device
     if args.distributed:
         if args.gpu is not None:
