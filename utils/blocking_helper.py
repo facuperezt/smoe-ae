@@ -1,8 +1,9 @@
 from numpy.lib.stride_tricks import as_strided as ast
 from itertools import product
 import numpy as np
+import torch
 
-__all__ = ['sliding_window']
+__all__ = ['sliding_window', 'sliding_window_torch']
 
 def norm_shape(shape):
     '''
@@ -95,3 +96,45 @@ def sliding_window(a,ws,ss = None,flatten = True):
     # remove any dimensions with size 1
     dim = filter(lambda i : i != 1,dim)
     return strided.reshape(dim)
+
+
+
+    import torch
+
+def norm_shape_torch(shape):
+    if isinstance(shape, int):
+        return (shape,)
+    elif isinstance(shape, (tuple, list)):
+        return tuple(shape)
+    elif isinstance(shape, torch.Tensor):
+        return tuple(shape.tolist())
+    else:
+        raise TypeError('shape must be an int, or a tuple of ints')
+
+def sliding_window_torch(a: torch.Tensor, ws, ss=None, flatten=True):
+    if ss is None:
+        ss = ws
+    ws = norm_shape_torch(ws)
+    ss = norm_shape_torch(ss)
+
+    # Convert to torch tensors
+    ws = torch.tensor(ws, dtype=torch.int8)
+    ss = torch.tensor(ss, dtype=torch.int8)
+
+    # Compute new shape and strides
+    newshape = norm_shape_torch((torch.tensor(a.shape) - ws) // ss + 1) + norm_shape_torch(ws)
+    newstrides = norm_shape_torch(ss * torch.tensor(a.stride())) + a.stride()
+
+    # Create a strided tensor
+    strided = a.as_strided(size=newshape, stride=newstrides)
+
+    if not flatten:
+        return strided
+
+    # Flatten the slices
+    meat = len(ws) if ws.shape[0] else 0
+    firstdim = (torch.prod(torch.tensor(newshape[:-meat]), device=a.device),) if ws.shape[0] else ()
+    dim = firstdim + newshape[-meat:]
+    # Remove dimensions with size 1
+    # dim = [i for i in dim if i != 1]
+    return strided.squeeze()

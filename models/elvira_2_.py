@@ -12,7 +12,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from utils import sliding_window, parse_cfg_file
+from utils import sliding_window, sliding_window_torch, parse_cfg_file, get_gpu_memory_usage
 from components import MixedLossFunction
 
 
@@ -80,11 +80,14 @@ class TorchSMoE_AE(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if len(x.shape) == 3:
             x = x[:, None, :, :]
-        # x = self.conv(x)
         for conv in self.conv:
+            print("before conv")
+            torch.mps.empty_cache()
+            print(get_gpu_memory_usage(self.conv[0].weight.device))
             x = conv(x)
-        # x = self.lin(x)
         for lin in self.lin:
+            print("before lin")
+            print(get_gpu_memory_usage(self.lin[0].weight.device))
             x = lin(x)
         return x
     
@@ -123,7 +126,7 @@ class TorchSMoE_SMoE(torch.nn.Module):
     """
     SMoE implemented in PyTorch, which allows for the gradients to be calculated with autograd
     """
-    def __init__(self, n_kernels: int = 4, block_size: int = 8):
+    def __init__(self, n_kernels: int = 4, block_size: int = 8, device: torch.device = torch.device("cpu")):
         super().__init__()
         self.n_kernels = n_kernels
         self.block_size = block_size
@@ -212,30 +215,38 @@ class TorchSMoE_SMoE(torch.nn.Module):
         return res
     
 class TorchSMoE(torch.nn.Module):
-    def __init__(self, img_size: int = 512, n_kernels: int = 4, block_size: int = 8, load_tf_model: bool = False):
+    def __init__(self, img_size: int = 512, n_kernels: int = 4, block_size: int = 8, load_tf_model: bool = False, device: torch.device = torch.device("cpu")):
         super().__init__()
         self.img_size = img_size
         self.n_kernels = n_kernels
         self.block_size = block_size
+        self.device = device
         self.ae = TorchSMoE_AE(n_kernels=n_kernels, block_size=block_size, load_tf_model=load_tf_model)
         self.clipper = TorchSMoE_clipper(n_kernels=n_kernels)
-        self.smoe = TorchSMoE_SMoE(n_kernels=n_kernels, block_size=block_size)
+        self.smoe = TorchSMoE_SMoE(n_kernels=n_kernels, block_size=block_size, device=device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_shape = x.shape
+        print("forward pass")
         if x.squeeze().ndim == 2:
             x = self.img_to_blocks(x)
-        x = x.to(self.ae.conv[0].weight.device)
+        print("before ae")
+        print(get_gpu_memory_usage(self.device))
         x = self.ae(x)
+        print("before clipper")
+        print(get_gpu_memory_usage(self.device))
         x = self.clipper(x)
-        x = x.to(torch.device("cpu"))
+        print("before smoe")
+        print(get_gpu_memory_usage(self.device))
         x = self.smoe(x)
+        print("before blocks_to_img")
+        print(get_gpu_memory_usage(self.device))
         x = self.blocks_to_img(x)
         x = x.view(x_shape)
         return x
     
     def img_to_blocks(self, img_input: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
-        return torch.tensor(sliding_window(np.asarray(img_input).squeeze(), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, -3).reshape(-1, 1, self.block_size, self.block_size)
+        return torch.tensor(sliding_window_torch(img_input.squeeze(), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, -3).reshape(-1, 1, self.block_size, self.block_size)
 
     def blocks_to_img(self, blocked_input: torch.Tensor) -> torch.Tensor:
         reshape_size = (int(self.img_size/self.block_size), int(self.img_size/self.block_size), self.block_size, self.block_size)
@@ -252,14 +263,23 @@ class TorchSMoE(torch.nn.Module):
 class Elvira2(TorchSMoE):
     def __init__(self, config_file_path: str, device: torch.device = torch.device("cpu")):
         cfg = parse_cfg_file(config_file_path)
-        super().__init__(img_size=cfg["ae"]["img_size"], n_kernels=cfg["ae"]["n_kernels"], block_size=cfg["ae"]["block_size"], load_tf_model=cfg["ae"]["load_tf_model"])
+        super().__init__(img_size=cfg["ae"]["img_size"], n_kernels=cfg["ae"]["n_kernels"], block_size=cfg["ae"]["block_size"], load_tf_model=cfg["ae"]["load_tf_model"], device=device)
         self.cfg = cfg
+        print("before ae")
+        print(get_gpu_memory_usage(self.device))
+        self.ae = self.ae.to(device)
+        print("before clipper")
+        print(get_gpu_memory_usage(self.device))
+        self.clipper = self.clipper.to(device)
+        print("before smoe")
+        print(get_gpu_memory_usage(self.device))
+        self.smoe = self.smoe.to(device)
+        print("before loss")
+        print(get_gpu_memory_usage(self.device))
         self.device = device
-        self.to(device)
-        self.ae.to(device)
-        self.clipper.to(device)
-        self.smoe.to(device)
         self.loss_function = MixedLossFunction(**self.cfg['loss_function']).to(device)
+        print("after everything")
+        print(get_gpu_memory_usage(self.device))
 
     def loss(self, x, y, return_separate_losses: bool = False):
         if return_separate_losses:
@@ -280,6 +300,7 @@ class Elvira2(TorchSMoE):
         if x.ndim < 4:
             x = x[None, :, :, :]
 
+        was_rgb = False
         # If image is RGB, convert to grayscale using cv2
         if x.shape[1] == 3:
             was_rgb = True
@@ -302,6 +323,13 @@ class Elvira2(TorchSMoE):
             y = torch.tensor(y).permute(0, 3, 1, 2).float()
 
         return y.to(x_device)
+    
+    def eval(self):
+        self.ae.eval()
+        self.clipper.eval()
+        self.smoe.eval()
+        self.loss_function.eval()
+        super().eval()
 
 if __name__ == "__main__":
     g = []

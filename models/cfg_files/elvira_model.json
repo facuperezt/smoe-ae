@@ -1,6 +1,6 @@
 {
     "n_kernels": 4,
-    "block_size": 8,
+    "block_size": 16,
     "img_size": 512,
     "n_channels": 1,
     "img2block": {

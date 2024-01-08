@@ -176,3 +176,7 @@ models/saves/
 
 bash_scripts/
 resources/
+
+# Scalene
+profile.html
+profile.json

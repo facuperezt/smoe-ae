@@ -1,6 +1,7 @@
 #%%
 import json
 import pickle
+import time
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
@@ -9,15 +10,22 @@ import torch.optim as optim
 from models import Asereje, Elvira2
 from data import DataLoader
 import argparse
-from utils import flatten_dict, sum_nested_dicts, plot_kernels, plot_kernel_centers
+from utils import flatten_dict, sum_nested_dicts, plot_kernels, plot_kernel_centers, get_gpu_memory_usage
 
 from PIL import Image
 
+from line_profiler import LineProfiler
+
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
-parser.add_argument("--cfg_file_path", default="train_cfg/default_cfg.json", type=str, help="Path to the training cfg file. It contains the model config file path.")
+parser.add_argument("--cfg_file_path", default="train_cfg/elvira_model.json", type=str, help="Path to the training cfg file. It contains the model config file path.")
 parser.add_argument("--save", action="store_true", help="Saves the results")
 args, unknown = parser.parse_known_args()
+
+# lp = LineProfiler()
+# lp_wrapper = lp.add_function(Elvira2.forward)
+# lp_wrapper = lp(Elvira2.embed_artifacts)
+
 
 with open(args.cfg_file_path, "r") as f:
     cfg = json.load(f)
@@ -33,11 +41,12 @@ def set_title(ax: plt.Axes, title: str) -> None:
 # Device configuration
 if torch.backends.mps.is_available():
     device = torch.device('mps')
+    torch.mps.set_per_process_memory_fraction(0.)
 elif torch.cuda.is_available():
     device = torch.device('cuda')
 else:
     device = torch.device('cpu')
-device = torch.device('cpu')
+# device = torch.device('cpu')
 # Define your dataloader
 train_loader = DataLoader(cfg["data"]["path"])
 train_loader.initialize()
@@ -55,7 +64,11 @@ if model_checkpoint_path is not None:
 model.eval()
 img = Image.open("data/professional_photos/train/ali-inay-2273.png").convert("L")
 img_arr = torch.tensor(np.asarray(img)[None, None, :, :]).float()/255
-out = model.embed_artifacts(img_arr)
+with torch.no_grad():
+    out = model(img_arr.to(device))
+# out = lp_wrapper(model, img_arr.to(device))
+# lp.print_stats()
+exit()
 print(out.shape)
 # Iterate over the training dataset
 for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5)):

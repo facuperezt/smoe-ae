@@ -15,3 +15,17 @@ def get_model_size_MB(model: torch.nn.Module):
     size_all_mb += 8*sum([p.numel() for p in model.parameters()])/1024**2
     # print('model size: {:.3f}MB'.format(size_all_mb))
     return size_all_mb
+
+
+def get_gpu_memory_usage(device: torch.device):
+    """
+    Returns the current GPU memory usage with torch.mps.current_allocated_memory()
+    """
+    if device.type == "mps":
+        return (torch.mps.current_allocated_memory() + torch.mps.driver_allocated_memory()) / 1024**2
+    elif device.type == "cuda":
+        return torch.cuda.memory_allocated(device) / 1024**2
+    elif device.type == "cpu":
+        return 0
+    else:
+        raise ValueError("Invalid device type")
