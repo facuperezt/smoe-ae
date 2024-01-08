@@ -82,7 +82,6 @@ class TorchSMoE_AE(torch.nn.Module):
             x = x[:, None, :, :]
         for conv in self.conv:
             print("before conv")
-            torch.mps.empty_cache()
             print(get_gpu_memory_usage(self.conv[0].weight.device))
             x = conv(x)
         for lin in self.lin:
