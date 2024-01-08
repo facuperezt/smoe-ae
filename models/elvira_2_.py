@@ -260,12 +260,15 @@ class TorchSMoE(torch.nn.Module):
         reshape_size = (int(self.img_size/self.block_size), int(self.img_size/self.block_size), self.block_size, self.block_size)
         return blocked_input.reshape(reshape_size).permute(0, 2, 1, 3).reshape(self.img_size, self.img_size)
 
-    def visualize_output(self, blocked_output: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1.) -> None:
+    def visualize_output(self, blocked_output: torch.Tensor, cmap: str = 'gray', vmin: float = 0., vmax: float = 1., ax: plt.Axes = None) -> None:
         if blocked_output.squeeze().ndim > 2:
-            img = self.blocks_to_img(blocked_output).detach().numpy()
+            img = self.blocks_to_img(blocked_output).cpu().detach().numpy()
         else:
-            img = blocked_output.squeeze().detach().numpy()
-        plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+            img = blocked_output.squeeze().cpu().detach().numpy()
+        if ax is None:
+            plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+        else:
+            ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
 
 
 class Elvira2(TorchSMoE):
@@ -328,9 +331,7 @@ class Elvira2(TorchSMoE):
             x = torch.nn.functional.interpolate(x, (self.img_size, self.img_size), mode='bilinear', align_corners=True)
         y = self.forward(x)
         if (w, h) != (self.img_size, self.img_size):
-            y = (y*255).type(torch.uint8)
             y = torch.nn.functional.interpolate(y, (w, h), mode='bilinear', align_corners=True)
-            y = y.float()*(1/255.)
 
         if was_rgb:
             y = y.permute(0, 2, 3, 1).detach().cpu().numpy()

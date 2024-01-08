@@ -1,4 +1,5 @@
 #%%
+from typing import List
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -55,13 +56,15 @@ def _plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, colo
     ax.plot(x,y, color=color, linewidth=linewidth, alpha=alpha)
 
 
-def plot_kernels(smoe_vector: torch.Tensor, ax: plt.Axes, n_kernels: int = 4) -> None:
+def plot_kernels(smoe_vector: torch.Tensor, ax: plt.Axes, padding: List[int] = None, n_kernels: int = 4) -> None:
     """
     Plots the kernels of a smoe vector in ax.
     """
+    if padding is None:
+        padding = [0, 0, 0, 0]
     smoe_vector = smoe_vector.detach().cpu().numpy()
-    means_x = smoe_vector[:n_kernels]
-    means_y = smoe_vector[n_kernels:2*n_kernels]
+    means_x = smoe_vector[:n_kernels] + padding[0]
+    means_y = smoe_vector[n_kernels:2*n_kernels] + padding[2]
     nus = smoe_vector[2*n_kernels:3*n_kernels]
     covs = smoe_vector[3*n_kernels:].reshape(-1, 2, 2)
     covs = np.tril(covs)
@@ -69,13 +72,15 @@ def plot_kernels(smoe_vector: torch.Tensor, ax: plt.Axes, n_kernels: int = 4) ->
         _plot_gaussian_contour(np.array([mx, my]), cov, ax, alpha=nu)
 
 
-def plot_kernel_centers(smoe_vector: torch.Tensor, ax: plt.Axes, n_kernels: int = 4) -> None:
+def plot_kernel_centers(smoe_vector: torch.Tensor, ax: plt.Axes, padding: List[int] = None, n_kernels: int = 4) -> None:
     """
     Plots the kernels of a smoe vector in ax.
     """
+    if padding is None:
+        padding = [0, 0, 0, 0]
     smoe_vector = smoe_vector.detach().cpu().numpy()
-    means_x = smoe_vector[:n_kernels]
-    means_y = smoe_vector[n_kernels:2*n_kernels]
+    means_x = smoe_vector[:n_kernels] + padding[0]
+    means_y = smoe_vector[n_kernels:2*n_kernels] + padding[2]
     for mx, my in zip(means_x, means_y):
         ax.scatter(mx, my, color="r", marker="x", s=50)
 

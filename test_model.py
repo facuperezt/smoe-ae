@@ -22,11 +22,11 @@ parser.add_argument("--cfg_file_path", default="train_cfg/elvira_model.json", ty
 parser.add_argument("--save", action="store_true", help="Saves the results")
 args, unknown = parser.parse_known_args()
 
-lp = LineProfiler()
-lp_wrapper = lp.add_function(Elvira2.forward)
-from models.elvira_2_ import TorchSMoE_SMoE
-lp_wrapper = lp.add_function(TorchSMoE_SMoE.torch_smoe)
-lp_wrapper = lp(Elvira2.embed_artifacts)
+# lp = LineProfiler()
+# lp_wrapper = lp.add_function(Elvira2.forward)
+# from models.elvira_2_ import TorchSMoE_SMoE
+# lp_wrapper = lp.add_function(TorchSMoE_SMoE.torch_smoe)
+# lp_wrapper = lp(Elvira2.embed_artifacts)
 
 
 with open(args.cfg_file_path, "r") as f:
@@ -67,31 +67,50 @@ model.eval()
 img = Image.open("data/professional_photos/train/ali-inay-2273.png").convert("L")
 img_arr = (torch.tensor(np.array(img), dtype=torch.float32, device=device, requires_grad=False)/255)
 img_arr = img_arr[None, None, :, :]
-# img_arr = torch.nn.functional.interpolate(img_arr, size=(256, 256), mode="bilinear", align_corners=True)
-with torch.no_grad():
+# with torch.no_grad():
     # start = time.time()
     # out = model.embed_artifacts(img_arr)
     # print(time.time() - start)
-    out = lp_wrapper(model, img_arr.to(device))
-lp.print_stats()
+#     out = lp_wrapper(model, img_arr.to(device))
+# lp.print_stats()
+# print(out.shape)
+img_arr = torch.nn.functional.interpolate(img_arr, size=(512, 512), mode="bilinear", align_corners=True)
+blocks = model.img_to_blocks(img_arr)
+emb = model.clipper(model.ae(blocks))
+print(emb.mean(dim=0))
+out = model.smoe(emb).cpu()
+emb = emb.cpu()
+blocks = blocks.cpu()
+for emb_i, block_i, out_i in zip(emb, blocks.squeeze(), out):
+    plt.close()
+    fig, ax = plt.subplots(1, 2)
+    # add padding around out_i
+    padding = [5, 5, 5, 5]
+    out_i = torch.nn.functional.pad(out_i, padding, value=0)
+    model.visualize_output(out_i, ax=ax[0])
+    plot_kernel_centers(emb_i, ax=ax[0], padding=padding)
+    plot_kernels(emb_i, ax=ax[0], padding=padding)
+    block_i = torch.nn.functional.pad(block_i, padding, value=0)
+    model.visualize_output(block_i, ax=ax[1])
+    plot_kernel_centers(emb_i, ax=ax[1], padding=padding)
+    plot_kernels(emb_i, ax=ax[1], padding=padding)
+    plt.show()
+    break
 exit()
-print(out.shape)
 # Iterate over the training dataset
 for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5)):
     print(i)
     inputs = inputs.to(device)
     labels = labels.to(device)
-    with open("data/elvira/images/blocked/16x16/baboon.pckl", "rb") as f:
-        img = pickle.load(f)["block"]
-        img = torch.tensor(img).float()[:, None, :, :]
-    blocks = model.img_to_blocks(inputs)
-    emb = model.clipper(model.ae(blocks))
+    blocks = model.img_to_blocks(inputs).cpu()
+    emb = model.clipper(model.ae(blocks)).cpu()
     for emb_i, block_i in zip(emb, blocks.squeeze()):
         plt.close()
-        fig, ax = plt.subplots()
-        ax.imshow(block_i)
-        plot_kernel_centers(emb_i, ax)
-        plot_kernels(emb_i, ax)
+        fig, ax = plt.subplots(1, 2)
+        model.visualize_output(block_i, ax=ax[0])
+        plot_kernel_centers(emb_i, ax=ax[0])
+        plot_kernels(emb_i, ax=ax[0])
+        model.visualize_output(emb_i, ax=ax[1])
     outputs = model(inputs)
     loss = model.loss(outputs, labels, return_separate_losses=True)
     # print(sum_nested_dicts(loss["e2e_loss"]).item(), sum_nested_dicts(loss["blockwise_loss"]).item())
