@@ -80,13 +80,16 @@ class TorchSMoE_AE(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if len(x.shape) == 3:
             x = x[:, None, :, :]
+        verbose = False
         for conv in self.conv:
-            print("before conv")
-            print(get_gpu_memory_usage(self.conv[0].weight.device))
+            if verbose:
+                print("before conv")
+                print(get_gpu_memory_usage(self.conv[0].weight.device))
             x = conv(x)
         for lin in self.lin:
-            print("before lin")
-            print(get_gpu_memory_usage(self.lin[0].weight.device))
+            if verbose:
+                print("before lin")
+                print(get_gpu_memory_usage(self.lin[0].weight.device))
             x = lin(x)
         return x
     
@@ -129,6 +132,9 @@ class TorchSMoE_SMoE(torch.nn.Module):
         super().__init__()
         self.n_kernels = n_kernels
         self.block_size = block_size
+        x = torch.linspace(0, 1, block_size, dtype=torch.float32)
+        y = torch.linspace(0, 1, block_size, dtype=torch.float32)
+        self.domain_init = torch.tensor(np.array(np.meshgrid(x, y)).T.reshape([block_size ** 2, 2]), dtype=torch.float32, device=device)
         pass
 
     def forward(self, x: torch.Tensor, use_numpy: bool = False) -> np.ndarray:
@@ -143,9 +149,7 @@ class TorchSMoE_SMoE(torch.nn.Module):
         block_size = self.block_size
         kernel_num = self.n_kernels
 
-        x = torch.linspace(0, 1, block_size, dtype=torch.float32)
-        y = torch.linspace(0, 1, block_size, dtype=torch.float32)
-        domain_init = torch.tensor(np.array(np.meshgrid(x, y)).T.reshape([block_size ** 2, 2]), dtype=torch.float32)
+        domain_init = self.domain_init.clone()
         center_x = arr[:, :kernel_num]
         center_y = arr[:, kernel_num:2 * kernel_num]
         A_NN = arr[:, 3 * kernel_num:].reshape([-1, kernel_num, 2, 2])
@@ -224,28 +228,33 @@ class TorchSMoE(torch.nn.Module):
         self.clipper = TorchSMoE_clipper(n_kernels=n_kernels)
         self.smoe = TorchSMoE_SMoE(n_kernels=n_kernels, block_size=block_size, device=device)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, verbose: bool = False) -> torch.Tensor:
         x_shape = x.shape
-        print("forward pass")
+        if verbose:
+            print("forward pass")
         if x.squeeze().ndim == 2:
             x = self.img_to_blocks(x)
-        print("before ae")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("before ae")
+            print(get_gpu_memory_usage(self.device))
         x = self.ae(x)
-        print("before clipper")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("before clipper")
+            print(get_gpu_memory_usage(self.device))
         x = self.clipper(x)
-        print("before smoe")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("before smoe")
+            print(get_gpu_memory_usage(self.device))
         x = self.smoe(x)
-        print("before blocks_to_img")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("before blocks_to_img")
+            print(get_gpu_memory_usage(self.device))
         x = self.blocks_to_img(x)
         x = x.view(x_shape)
         return x
     
     def img_to_blocks(self, img_input: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
-        return torch.tensor(sliding_window_torch(img_input.squeeze(), 2*[self.block_size], 2*[self.block_size], False)).flatten(0, -3).reshape(-1, 1, self.block_size, self.block_size)
+        return sliding_window_torch(img_input.squeeze(), 2*[self.block_size], 2*[self.block_size], False).flatten(0, -3).reshape(-1, 1, self.block_size, self.block_size)
 
     def blocks_to_img(self, blocked_input: torch.Tensor) -> torch.Tensor:
         reshape_size = (int(self.img_size/self.block_size), int(self.img_size/self.block_size), self.block_size, self.block_size)
@@ -260,25 +269,30 @@ class TorchSMoE(torch.nn.Module):
 
 
 class Elvira2(TorchSMoE):
-    def __init__(self, config_file_path: str, device: torch.device = torch.device("cpu")):
+    def __init__(self, config_file_path: str, device: torch.device = torch.device("cpu"), verbose: bool = False):
         cfg = parse_cfg_file(config_file_path)
         super().__init__(img_size=cfg["ae"]["img_size"], n_kernels=cfg["ae"]["n_kernels"], block_size=cfg["ae"]["block_size"], load_tf_model=cfg["ae"]["load_tf_model"], device=device)
         self.cfg = cfg
-        print("before ae")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("before ae")
+            print(get_gpu_memory_usage(self.device))
         self.ae = self.ae.to(device)
-        print("before clipper")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("before clipper")
+            print(get_gpu_memory_usage(self.device))
         self.clipper = self.clipper.to(device)
-        print("before smoe")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("before smoe")
+            print(get_gpu_memory_usage(self.device))
         self.smoe = self.smoe.to(device)
-        print("before loss")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("before loss")
+            print(get_gpu_memory_usage(self.device))
         self.device = device
         self.loss_function = MixedLossFunction(**self.cfg['loss_function']).to(device)
-        print("after everything")
-        print(get_gpu_memory_usage(self.device))
+        if verbose:
+            print("after everything")
+            print(get_gpu_memory_usage(self.device))
 
     def loss(self, x, y, return_separate_losses: bool = False):
         if return_separate_losses:
@@ -314,7 +328,9 @@ class Elvira2(TorchSMoE):
             x = torch.nn.functional.interpolate(x, (self.img_size, self.img_size), mode='bilinear', align_corners=True)
         y = self.forward(x)
         if (w, h) != (self.img_size, self.img_size):
+            y = (y*255).type(torch.uint8)
             y = torch.nn.functional.interpolate(y, (w, h), mode='bilinear', align_corners=True)
+            y = y.float()*(1/255.)
 
         if was_rgb:
             y = y.permute(0, 2, 3, 1).detach().cpu().numpy()

@@ -22,9 +22,11 @@ parser.add_argument("--cfg_file_path", default="train_cfg/elvira_model.json", ty
 parser.add_argument("--save", action="store_true", help="Saves the results")
 args, unknown = parser.parse_known_args()
 
-# lp = LineProfiler()
-# lp_wrapper = lp.add_function(Elvira2.forward)
-# lp_wrapper = lp(Elvira2.embed_artifacts)
+lp = LineProfiler()
+lp_wrapper = lp.add_function(Elvira2.forward)
+from models.elvira_2_ import TorchSMoE_SMoE
+lp_wrapper = lp.add_function(TorchSMoE_SMoE.torch_smoe)
+lp_wrapper = lp(Elvira2.embed_artifacts)
 
 
 with open(args.cfg_file_path, "r") as f:
@@ -63,11 +65,15 @@ if model_checkpoint_path is not None:
 
 model.eval()
 img = Image.open("data/professional_photos/train/ali-inay-2273.png").convert("L")
-img_arr = torch.tensor(np.asarray(img)[None, None, :, :]).float()/255
+img_arr = (torch.tensor(np.array(img), dtype=torch.float32, device=device, requires_grad=False)/255)
+img_arr = img_arr[None, None, :, :]
+# img_arr = torch.nn.functional.interpolate(img_arr, size=(256, 256), mode="bilinear", align_corners=True)
 with torch.no_grad():
-    out = model(img_arr.to(device))
-# out = lp_wrapper(model, img_arr.to(device))
-# lp.print_stats()
+    # start = time.time()
+    # out = model.embed_artifacts(img_arr)
+    # print(time.time() - start)
+    out = lp_wrapper(model, img_arr.to(device))
+lp.print_stats()
 exit()
 print(out.shape)
 # Iterate over the training dataset
