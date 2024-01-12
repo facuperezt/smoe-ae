@@ -56,7 +56,7 @@ def validateSinGAN(data_loader, networks, stage, args, additional=None):
         vutils.save_image(x_rec_list[-1].detach().cpu(), os.path.join(args.res_dir, 'REC_{}.png'.format(stage)),
                           nrow=1, normalize=True)
 
-        for k in range(1):
+        for k in range(5):
             z_list = [rmse_list[z_idx] * torch.randn(args.batch_size, 3, args.size_list[z_idx],
                                                      args.size_list[z_idx]).to(args.device, non_blocking=True) for z_idx in range(stage + 1)]
             x_fake_list = G(z_list)
