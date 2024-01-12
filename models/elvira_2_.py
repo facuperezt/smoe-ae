@@ -4,6 +4,7 @@ import sys
 import os
 import itertools
 import pickle
+import time
 from typing import Union
 from PIL import Image
 import cv2
@@ -342,11 +343,13 @@ class Elvira2(TorchSMoE):
         return y.to(x_device)
     
 
-    def embed_artifacts_without_resize(self, x: torch.Tensor) -> torch.Tensor:
+    def embed_artifacts_without_resize(self, x: torch.Tensor, scale: int = None) -> torch.Tensor:
         """
         Input is a tensor of shape (n, c, w, h)
         Output is a tensor of shape (n, 1, w, h)
         """
+        if scale is not None:
+            start = time.time()
         x_device = x.device
         if x.ndim < 3:
             x = x[None, :, :]
@@ -379,12 +382,14 @@ class Elvira2(TorchSMoE):
         self.img_size = new_w
         y = self.forward(x)
         self.img_size = old_img_size
-        
+
         if was_rgb:
             y = y.permute(0, 2, 3, 1).detach().cpu().numpy()
             y = np.asarray([cv2.cvtColor(img, cv2.COLOR_GRAY2RGB) for img in y])
             y = torch.tensor(y).permute(0, 3, 1, 2).float()
 
+        if scale is not None:
+            print(f"Time for embed_artifacts_without_resize at scale [{scale}]: {time.time()-start}")
         return y.to(x_device) 
 
     def eval(self):

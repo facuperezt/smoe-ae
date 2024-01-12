@@ -52,7 +52,6 @@ class GeneratorWithCompression(nn.Module):
         for i in range(1, self.current_scale + 1):
             x_inter = F.interpolate(x_inter, (self.size_list[i], self.size_list[i]), mode='bilinear', align_corners=True)
             x_prev = x_inter
-            x_inter = F.pad(x_inter, [5, 5, 5, 5], value=0)
             x_inter = x_inter + self.compressor.embed_artifacts_without_resize(z[i])
             x_inter = self.sub_generators[i](x_inter) + x_prev
             x_list.append(x_inter)
@@ -66,16 +65,16 @@ class GeneratorWithCompression(nn.Module):
             self.nf *= 2
 
         tmp_generator = nn.ModuleList()
-        tmp_generator.append(nn.Sequential(nn.Conv2d(3, self.nf, 3, 1),
+        tmp_generator.append(nn.Sequential(nn.Conv2d(3, self.nf, 3, 1, 1),
                                            nn.BatchNorm2d(self.nf),
                                            nn.LeakyReLU(2e-1)))
 
         for _ in range(3):
-            tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.nf, 3, 1),
+            tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.nf, 3, 1, 1),
                                                nn.BatchNorm2d(self.nf),
                                                nn.LeakyReLU(2e-1)))
 
-        tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, 3, 3, 1),
+        tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, 3, 3, 1, 1),
                                            nn.Tanh()))
 
         tmp_generator = nn.Sequential(*tmp_generator)
