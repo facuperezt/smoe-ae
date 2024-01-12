@@ -364,7 +364,7 @@ class Elvira2(TorchSMoE):
             x = np.asarray([cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) for img in x])
             if x.ndim < 4:
                 x = x[:, :, :, None]
-            x = torch.tensor(x).permute(0, 3, 1, 2).float()
+            x = torch.tensor(x).permute(0, 3, 1, 2).float().to(x_device)
 
         w, h = x.shape[-2:]
         ratio = w/h

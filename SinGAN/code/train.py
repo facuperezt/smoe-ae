@@ -31,8 +31,8 @@ def trainSinGAN(data_loader, networks, opts, stage, args, additional):
     train_it = iter(data_loader)
     # total_iter = 2000 * (args.num_scale - stage + 1)
     # decay_lr = 1600 * (args.num_scale - stage + 1)
-    total_iter = 200
-    decay_lr = 160
+    total_iter = 2000
+    decay_lr = 1600
 
     d_iter = 3
     g_iter = 3

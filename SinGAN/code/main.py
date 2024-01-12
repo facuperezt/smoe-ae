@@ -139,13 +139,14 @@ def main_worker(gpu, ngpus_per_node, args):
     args.num_scale = int(np.round(np.log(tmp_scale) / np.log(scale_factor)))
     args.size_list = [int(args.img_size_min * scale_factor**i) for i in range(args.num_scale + 1)]
 
+    device = get_torch_device()
+    args.device = device
+
     discriminator = Discriminator()
-    generator = GeneratorWithCompression(args.img_size_min, args.num_scale, scale_factor)
+    generator = GeneratorWithCompression(args.img_size_min, args.num_scale, scale_factor, device=args.device)
 
     networks = [discriminator, generator]
 
-    device = get_torch_device("cpu")
-    args.device = device
     if args.distributed:
         if args.gpu is not None:
             print('Distributed to', args.gpu)

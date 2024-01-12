@@ -9,14 +9,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 from models import Elvira2
 
 class GeneratorWithCompression(nn.Module):
-    def __init__(self, img_size_min, num_scale, scale_factor=4/3):
+    def __init__(self, img_size_min, num_scale, scale_factor=4/3, device=torch.device('cpu')):
         super(GeneratorWithCompression, self).__init__()
         self.img_size_min = img_size_min
         self.scale_factor = scale_factor
         self.num_scale = num_scale
         self.nf = 32
         self.current_scale = 0
-        self.compressor = Elvira2(config_file_path="models/cfg_files/elvira_model.json", device=torch.device("cpu"))
+        self.compressor = Elvira2(config_file_path="models/cfg_files/elvira_model.json", device=device)
         self.size_list = [int(self.img_size_min * scale_factor**i) for i in range(num_scale + 1)]
         print(self.size_list)
 
