@@ -375,9 +375,11 @@ class Elvira2(TorchSMoE):
         new_w -= new_w % self.block_size
         new_h -= new_h % self.block_size
         x = torch.nn.functional.interpolate(x, (new_w, new_h), mode='bilinear', align_corners=True)
+        old_img_size = self.img_size
         self.img_size = new_w
         y = self.forward(x)
-
+        self.img_size = old_img_size
+        
         if was_rgb:
             y = y.permute(0, 2, 3, 1).detach().cpu().numpy()
             y = np.asarray([cv2.cvtColor(img, cv2.COLOR_GRAY2RGB) for img in y])
