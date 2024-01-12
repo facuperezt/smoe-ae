@@ -267,6 +267,7 @@ class TorchSMoE(torch.nn.Module):
             img = blocked_output.squeeze().cpu().detach().numpy()
         if ax is None:
             plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
+            plt.show()
         else:
             ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
 
@@ -340,6 +341,50 @@ class Elvira2(TorchSMoE):
 
         return y.to(x_device)
     
+
+    def embed_artifacts_without_resize(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Input is a tensor of shape (n, c, w, h)
+        Output is a tensor of shape (n, 1, w, h)
+        """
+        x_device = x.device
+        if x.ndim < 3:
+            x = x[None, :, :]
+        if x.ndim < 4:
+            x = x[None, :, :, :]
+
+        was_rgb = False
+        # If image is RGB, convert to grayscale using cv2
+        if x.shape[1] == 3:
+            was_rgb = True
+            x = x.permute(0, 2, 3, 1).detach().cpu().numpy()
+            x = np.asarray([cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) for img in x])
+            if x.ndim < 4:
+                x = x[:, :, :, None]
+            x = torch.tensor(x).permute(0, 3, 1, 2).float()
+
+        w, h = x.shape[-2:]
+        ratio = w/h
+        if ratio > 1:
+            new_w = min(w, self.img_size)
+            new_h = new_w
+        else:
+            new_h = min(h, self.img_size)
+            new_w = new_h
+        new_w, new_h = min(w, self.img_size), min(h, self.img_size)
+        new_w -= new_w % self.block_size
+        new_h -= new_h % self.block_size
+        x = torch.nn.functional.interpolate(x, (new_w, new_h), mode='bilinear', align_corners=True)
+        self.img_size = new_w
+        y = self.forward(x)
+
+        if was_rgb:
+            y = y.permute(0, 2, 3, 1).detach().cpu().numpy()
+            y = np.asarray([cv2.cvtColor(img, cv2.COLOR_GRAY2RGB) for img in y])
+            y = torch.tensor(y).permute(0, 3, 1, 2).float()
+
+        return y.to(x_device) 
+
     def eval(self):
         self.ae.eval()
         self.clipper.eval()

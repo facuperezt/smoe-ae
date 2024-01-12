@@ -78,9 +78,8 @@ def trainSinGAN(data_loader, networks, opts, stage, args, additional):
                 rmse = torch.sqrt(F.mse_loss(x_rec_list[rmseidx], x_in_list[rmseidx]))
                 rmse_list.append(rmse)
 
-            z_list = [F.pad(rmse_list[z_idx] * torch.randn(args.batch_size, 3, args.size_list[z_idx],
-                                               args.size_list[z_idx]).to(args.device, non_blocking=True),
-                            [5, 5, 5, 5], value=0) for z_idx in range(stage + 1)]
+            z_list = [rmse_list[z_idx] * torch.randn(args.batch_size, 3, args.size_list[z_idx],
+                                               args.size_list[z_idx]).to(args.device, non_blocking=True) for z_idx in range(stage + 1)]
 
             x_fake_list = G(z_list)
 
