@@ -85,7 +85,7 @@ def get_dataset(dataset, args):
                                              normalize])
 
         train_dataset = PhotoData(args.data_dir, True, transform=transforms_train, img_to_use=args.img_to_use)
-        val_dataset = PhotoData(args.data_dir, False, transform=transforms_val, img_to_use=args.img_to_use)
+        val_dataset = PhotoData(args.data_dir, False, transform=transforms_val, img_to_use=-999)
 
         if train_dataset.randidx != -999:
             args.img_to_use = train_dataset.randidx

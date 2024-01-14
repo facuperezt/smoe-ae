@@ -29,3 +29,18 @@ def get_gpu_memory_usage(device: torch.device):
         return 0
     else:
         raise ValueError("Invalid device type")
+
+
+def clear_gpu_cache(device: torch.device):
+    """
+    Clears the GPU cache
+    """
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    elif device.type == "mps":
+        torch.mps.empty_cache()
+    elif device.type == "cpu":
+        pass
+    else:
+        raise ValueError("Invalid device type")
+    

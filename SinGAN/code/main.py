@@ -29,6 +29,8 @@ from singan_utils import makedirs, get_torch_device, formatted_print, save_check
 from train import trainSinGAN
 from validation import validateSinGAN
 
+from utils import clear_gpu_cache
+
 
 parser = argparse.ArgumentParser(description='PyTorch Simultaneous Training')
 parser.add_argument('--data_dir', default='data/', help='path to dataset')
@@ -323,6 +325,8 @@ def main_worker(gpu, ngpus_per_node, args):
                                      5e-4, (0.5, 0.999))
             g_opt = torch.optim.Adam(generator.sub_generators[generator.current_scale].parameters(),
                                      5e-4, (0.5, 0.999))
+
+            clear_gpu_cache(args.device)
 
         ##############
         # Save model #
