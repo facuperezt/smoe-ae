@@ -62,6 +62,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
 parser.add_argument('--port', default='8888', type=str)
+parser.add_argument('--force_discriminator_into_cpu', action='store_true', help='Forces the Discriminator into the CPU. Useful for memory issues.')
 
 
 def main():
@@ -228,6 +229,10 @@ def main_worker(gpu, ngpus_per_node, args):
 
     cudnn.benchmark = True
 
+    if args.force_discriminator_into_cpu:
+        discriminator = discriminator.to(torch.device("cpu"))
+        networks = discriminator, generator
+
     ###########
     # Dataset #
     ###########
@@ -320,13 +325,14 @@ def main_worker(gpu, ngpus_per_node, args):
                     param.requires_grad = False
                 for param in discriminator.sub_discriminators[net_idx].parameters():
                     param.requires_grad = False
-
+            del d_opt
+            del g_opt
+            clear_gpu_cache(args.device)
             d_opt = torch.optim.Adam(discriminator.sub_discriminators[discriminator.current_scale].parameters(),
                                      5e-4, (0.5, 0.999))
             g_opt = torch.optim.Adam(generator.sub_generators[generator.current_scale].parameters(),
                                      5e-4, (0.5, 0.999))
 
-            clear_gpu_cache(args.device)
 
         ##############
         # Save model #

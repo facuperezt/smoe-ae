@@ -85,7 +85,7 @@ def trainSinGAN(data_loader, networks, opts, stage, args, additional):
 
             g_fake_logit = D(x_fake_list[-1])
 
-            ones = torch.ones_like(g_fake_logit).to(args.device)
+            ones = torch.ones_like(g_fake_logit).to(g_fake_logit.device)
 
             if args.gantype == 'wgangp':
                 # wgan gp
@@ -116,8 +116,8 @@ def trainSinGAN(data_loader, networks, opts, stage, args, additional):
             d_fake_logit = D(x_fake_list[-1].detach())
             d_real_logit = D(x_in)
 
-            ones = torch.ones_like(d_real_logit).to(args.device)
-            zeros = torch.zeros_like(d_fake_logit).to(args.device)
+            ones = torch.ones_like(d_real_logit).to(d_real_logit.device)
+            zeros = torch.zeros_like(d_fake_logit).to(d_fake_logit.device)
 
             if args.gantype == 'wgangp':
                 # wgan gp

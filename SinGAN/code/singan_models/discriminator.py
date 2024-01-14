@@ -2,7 +2,7 @@ from torch import nn
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, n_layers_cpu: int = 0):
         super(Discriminator, self).__init__()
         self.nf = 32
         self.current_scale = 0
@@ -25,6 +25,8 @@ class Discriminator(nn.Module):
         self.sub_discriminators.append(first_discriminator)
 
     def forward(self, x):
+        if x.device != self.sub_discriminators[0][0][0].weight.device:
+            x = x.to(self.sub_discriminators[0][0][0].weight.device)
         out = self.sub_discriminators[self.current_scale](x)
         return out
 
