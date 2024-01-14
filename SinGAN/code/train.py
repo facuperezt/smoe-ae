@@ -145,5 +145,10 @@ def trainSinGAN(data_loader, networks, opts, stage, args, additional):
 
             d_losses.update(d_loss.item(), x_in.size(0))
 
+            if d_loss < g_loss / 2:
+                g_iter = 6
+            else:
+                g_iter = 3
+
         t_train.set_description('Stage: [{}/{}] Avg Loss: D[{d_losses.avg:.3f}] G[{g_losses.avg:.3f}] RMSE[{rmse:.3f}]'
                                 .format(stage, args.num_scale, d_losses=d_losses, g_losses=g_losses, rmse=rmse_list[-1]))
