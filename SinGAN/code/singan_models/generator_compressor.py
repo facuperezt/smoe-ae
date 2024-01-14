@@ -61,8 +61,8 @@ class GeneratorWithCompression(nn.Module):
     def progress(self):
         self.current_scale += 1
 
-        if self.current_scale % 4 == 0:
-            self.nf *= 2
+        # if self.current_scale % 8 == 0:
+        #     self.nf *= 2
 
         tmp_generator = nn.ModuleList()
         tmp_generator.append(nn.Sequential(nn.Conv2d(3, self.nf, 3, 1, 1),
