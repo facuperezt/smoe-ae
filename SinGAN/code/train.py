@@ -32,7 +32,7 @@ def trainSinGAN(data_loader, networks, opts, stage, args, additional):
     # total_iter = 2000 * (args.num_scale - stage + 1)
     # decay_lr = 1600 * (args.num_scale - stage + 1)
     total_iter = 4000
-    decay_lr = 3200
+    decay_lr = [1600, 3200]
 
     d_iter = 3
     g_iter = 3
@@ -58,7 +58,7 @@ def trainSinGAN(data_loader, networks, opts, stage, args, additional):
         x_in_list.append(x_tmp)
 
     for i in t_train:
-        if i == decay_lr:
+        if i in decay_lr:
             for param_group in d_opt.param_groups:
                     param_group['lr'] *= 0.1
                     print("DISCRIMINATOR LEARNING RATE UPDATE TO :", param_group['lr'])
