@@ -63,10 +63,14 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'multi node data parallel training')
 parser.add_argument('--port', default='8888', type=str)
 parser.add_argument('--force_discriminator_into_cpu', action='store_true', help='Forces the Discriminator into the CPU. Useful for memory issues.')
+parser.add_argument('--return_loaded_models', action='store_true', help='Returns the loaded models. Useful for debugging.')
 
 
-def main():
+def main(return_loaded_models=False):
     args = parser.parse_args()
+
+    if return_loaded_models:
+        args.return_loaded_models = True
 
     if args.gpu is not None:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
@@ -232,6 +236,9 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.force_discriminator_into_cpu:
         discriminator = discriminator.to(torch.device("cpu"))
         networks = discriminator, generator
+
+    if args.return_loaded_models:
+        return discriminator
 
     ###########
     # Dataset #
