@@ -9,11 +9,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 from models import Elvira2
 
 class GeneratorWithCompression(nn.Module):
-    def __init__(self, img_size_min, num_scale, scale_factor=4/3, device=torch.device('cpu')):
+    def __init__(self, img_size_min, num_scale, scale_factor=4/3, n_channels: int = 3, device=torch.device('cpu')):
         super(GeneratorWithCompression, self).__init__()
         self.img_size_min = img_size_min
         self.scale_factor = scale_factor
         self.num_scale = num_scale
+        self.n_channels = n_channels
         self.nf = 32
         self.current_scale = 0
         self.compressor = Elvira2(config_file_path="models/cfg_files/elvira_model.json", device=device)
@@ -24,7 +25,7 @@ class GeneratorWithCompression(nn.Module):
 
         first_generator = nn.ModuleList()
 
-        first_generator.append(nn.Sequential(nn.Conv2d(3, self.nf, 3, 1, 1),
+        first_generator.append(nn.Sequential(nn.Conv2d(n_channels, self.nf, 3, 1, 1),
                                              nn.BatchNorm2d(self.nf),
                                              nn.LeakyReLU(2e-1)))
         for _ in range(3):
@@ -32,7 +33,7 @@ class GeneratorWithCompression(nn.Module):
                                                  nn.BatchNorm2d(self.nf),
                                                  nn.LeakyReLU(2e-1)))
 
-        first_generator.append(nn.Sequential(nn.Conv2d(self.nf, 3, 3, 1, 1),
+        first_generator.append(nn.Sequential(nn.Conv2d(self.nf, n_channels, 3, 1, 1),
                                              nn.Tanh()))
 
         first_generator = nn.Sequential(*first_generator)
@@ -65,7 +66,7 @@ class GeneratorWithCompression(nn.Module):
         #     self.nf *= 2
 
         tmp_generator = nn.ModuleList()
-        tmp_generator.append(nn.Sequential(nn.Conv2d(3, self.nf, 3, 1, 1),
+        tmp_generator.append(nn.Sequential(nn.Conv2d(self.n_channels, self.nf, 3, 1, 1),
                                            nn.BatchNorm2d(self.nf),
                                            nn.LeakyReLU(2e-1)))
 
@@ -74,7 +75,7 @@ class GeneratorWithCompression(nn.Module):
                                                nn.BatchNorm2d(self.nf),
                                                nn.LeakyReLU(2e-1)))
 
-        tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, 3, 3, 1, 1),
+        tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.n_channels, 3, 1, 1),
                                            nn.Tanh()))
 
         tmp_generator = nn.Sequential(*tmp_generator)

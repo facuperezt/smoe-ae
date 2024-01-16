@@ -149,7 +149,7 @@ def main_worker(gpu, ngpus_per_node, args):
     device = get_torch_device()
     args.device = device
 
-    discriminator = Discriminator()
+    discriminator = Discriminator(n_channels=1)
     generator = GeneratorWithCompression(args.img_size_min, args.num_scale, scale_factor, device=args.device)
 
     networks = [discriminator, generator]
