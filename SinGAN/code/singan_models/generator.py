@@ -20,15 +20,15 @@ class Generator(nn.Module):
 
         first_generator = nn.ModuleList()
 
-        first_generator.append(nn.Sequential(nn.Conv2d(n_channels, self.nf, 3, 1),
+        first_generator.append(nn.Sequential(nn.Conv2d(n_channels, self.nf, 3, 1, 1),
                                              nn.BatchNorm2d(self.nf),
                                              nn.LeakyReLU(2e-1)))
         for _ in range(3):
-            first_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.nf, 3, 1),
+            first_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.nf, 3, 1, 1),
                                                  nn.BatchNorm2d(self.nf),
                                                  nn.LeakyReLU(2e-1)))
 
-        first_generator.append(nn.Sequential(nn.Conv2d(self.nf, n_channels, 3, 1),
+        first_generator.append(nn.Sequential(nn.Conv2d(self.nf, n_channels, 3, 1, 1),
                                              nn.Tanh()))
 
         first_generator = nn.Sequential(*first_generator)
@@ -62,16 +62,16 @@ class Generator(nn.Module):
             self.nf *= 2
 
         tmp_generator = nn.ModuleList()
-        tmp_generator.append(nn.Sequential(nn.Conv2d(self.n_channels, self.nf, 3, 1),
+        tmp_generator.append(nn.Sequential(nn.Conv2d(self.n_channels, self.nf, 3, 1, 1),
                                            nn.BatchNorm2d(self.nf),
                                            nn.LeakyReLU(2e-1)))
 
         for _ in range(3):
-            tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.nf, 3, 1),
+            tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.nf, 3, 1, 1),
                                                nn.BatchNorm2d(self.nf),
                                                nn.LeakyReLU(2e-1)))
 
-        tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.n_channels, 3, 1),
+        tmp_generator.append(nn.Sequential(nn.Conv2d(self.nf, self.n_channels, 3, 1, 1),
                                            nn.Tanh()))
 
         tmp_generator = nn.Sequential(*tmp_generator)
