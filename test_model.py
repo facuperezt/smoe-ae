@@ -91,14 +91,14 @@ for emb_i, block_i, out_i in zip(emb, blocks.squeeze(), out):
     padding = [5, 5, 5, 5]
     out_i = torch.nn.functional.pad(out_i, padding, value=0)
     model.visualize_output(out_i, ax=ax[0])
-    plot_kernel_centers(emb_i, ax=ax[0], padding=padding)
-    plot_kernels(emb_i, ax=ax[0], padding=padding)
+    plot_kernel_centers(emb_i, ax=ax[0], block_size=model.block_size, padding=padding)
+    plot_kernels(emb_i, ax=ax[0], block_size=model.block_size, padding=padding)
     block_i = torch.nn.functional.pad(block_i, padding, value=0)
     model.visualize_output(block_i, ax=ax[1])
-    plot_kernel_centers(emb_i, ax=ax[1], padding=padding)
-    plot_kernels(emb_i, ax=ax[1], padding=padding)
+    plot_kernel_centers(emb_i, ax=ax[1], block_size=model.block_size, padding=padding)
+    plot_kernels(emb_i, ax=ax[1], block_size=model.block_size, padding=padding)
     plt.show()
-    break
+
 exit()
 # Iterate over the training dataset
 for i, (inputs, labels) in enumerate(train_loader.get(data="valid", limit_to=5)):

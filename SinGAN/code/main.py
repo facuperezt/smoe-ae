@@ -41,8 +41,8 @@ parser.add_argument('--workers', default=1, type=int, help='number of data loadi
 parser.add_argument('--batch_size', default=1, type=int,
                     help='Total batch size - e.g) num_gpus = 2 , batch_size = 128 then, effectively, 64')
 parser.add_argument('--val_batch', default=1, type=int)
-parser.add_argument('--img_size_max', default=250, type=int, help='Input image size')
-parser.add_argument('--img_size_min', default=25, type=int, help='Input image size')
+parser.add_argument('--img_size_max', default=512, type=int, help='Input image size')
+parser.add_argument('--img_size_min', default=16, type=int, help='Input image size')
 parser.add_argument('--img_to_use', default=-999, type=int, help='Index of the input image to use < 6287')
 parser.add_argument('--load_model', default=None, type=str, metavar='PATH',
                     help='path to latest checkpoint (default: None)')
