@@ -38,7 +38,7 @@ class Discriminator(nn.Module):
             self.nf *= 2
 
         tmp_discriminator = nn.ModuleList()
-        tmp_discriminator.append(nn.Sequential(nn.Conv2d(3, self.nf, 3, 1, 1),
+        tmp_discriminator.append(nn.Sequential(nn.Conv2d(self.n_channels, self.nf, 3, 1, 1),
                                                nn.LeakyReLU(2e-1)))
 
         for _ in range(3):

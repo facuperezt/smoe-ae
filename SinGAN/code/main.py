@@ -64,6 +64,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
 parser.add_argument('--port', default='8888', type=str)
 parser.add_argument('--force_discriminator_into_cpu', action='store_true', help='Forces the Discriminator into the CPU. Useful for memory issues.')
 parser.add_argument('--return_loaded_models', action='store_true', help='Returns the loaded models. Useful for debugging.')
+parser.add_argument('--n_channels', default=3, type=int, help='Number of channels in the input image')
 
 
 def main(return_loaded_models=False):
@@ -149,8 +150,8 @@ def main_worker(gpu, ngpus_per_node, args):
     device = get_torch_device()
     args.device = device
 
-    discriminator = Discriminator(n_channels=1)
-    generator = GeneratorWithCompression(args.img_size_min, args.num_scale, scale_factor, n_channels=1, device=args.device)
+    discriminator = Discriminator(n_channels=args.n_channels)
+    generator = GeneratorWithCompression(args.img_size_min, args.num_scale, scale_factor, n_channels=args.n_channels, device=args.device)
 
     networks = [discriminator, generator]
 
@@ -258,8 +259,8 @@ def main_worker(gpu, ngpus_per_node, args):
     ######################
     # Validate and Train #
     ######################
-    z_fix_list = [torch.randn(args.batch_size, 3, args.size_list[0], args.size_list[0])]
-    zero_list = [torch.zeros(args.batch_size, 3, args.size_list[zeros_idx], args.size_list[zeros_idx]) for zeros_idx in range(1, args.num_scale + 1)]
+    z_fix_list = [torch.randn(args.batch_size, args.n_channels, args.size_list[0], args.size_list[0])]
+    zero_list = [torch.zeros(args.batch_size, args.n_channels, args.size_list[zeros_idx], args.size_list[zeros_idx]) for zeros_idx in range(1, args.num_scale + 1)]
     z_fix_list = z_fix_list + zero_list
 
     if args.validation:
