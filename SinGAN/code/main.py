@@ -34,7 +34,7 @@ from utils import clear_gpu_cache
 
 parser = argparse.ArgumentParser(description='PyTorch Simultaneous Training')
 parser.add_argument('--data_dir', default='data/', help='path to dataset')
-parser.add_argument('--dataset', default='PHOTO', help='type of dataset', choices=['PHOTO'])
+parser.add_argument('--dataset', default='PHOTO', help='type of dataset', choices=['PHOTO', 'PHOTO_GRAYSCALE'])
 parser.add_argument('--gantype', default='zerogp', help='type of GAN loss', choices=['wgangp', 'zerogp', 'lsgan'])
 parser.add_argument('--model_name', type=str, default='SinGAN', help='model name')
 parser.add_argument('--workers', default=1, type=int, help='number of data loading workers (default: 8)')
