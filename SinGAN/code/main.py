@@ -181,7 +181,7 @@ def main_worker(gpu, ngpus_per_node, args):
         g_opt = torch.optim.Adam(generator.module.sub_generators[0].parameters(), 5e-4, (0.5, 0.999))
     else:
         d_opt = torch.optim.Adam(discriminator.sub_discriminators[0].parameters(), 5e-4, (0.5, 0.999))
-        g_opt = torch.optim.Adam(generator.sub_generators[0].parameters(), 5e-4, (0.5, 0.999))
+        g_opt = torch.optim.SGD(generator.sub_generators[0].parameters(), 5e-4, (0.5, 0.999))
 
     ##############
     # Load model #
@@ -337,7 +337,7 @@ def main_worker(gpu, ngpus_per_node, args):
             clear_gpu_cache(args.device)
             d_opt = torch.optim.Adam(discriminator.sub_discriminators[discriminator.current_scale].parameters(),
                                      5e-4, (0.5, 0.999))
-            g_opt = torch.optim.Adam(generator.sub_generators[generator.current_scale].parameters(),
+            g_opt = torch.optim.SGD(generator.sub_generators[generator.current_scale].parameters(),
                                      5e-4, (0.5, 0.999))
 
 

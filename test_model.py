@@ -16,6 +16,8 @@ from PIL import Image
 
 from line_profiler import LineProfiler
 
+from SinGAN.code.get_trained_discriminators import get_trained_discriminators
+
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
 parser.add_argument("--cfg_file_path", default="train_cfg/elvira_model.json", type=str, help="Path to the training cfg file. It contains the model config file path.")
@@ -58,6 +60,8 @@ train_loader.initialize()
 model = Elvira2(config_file_path=cfg["model"]["cfg_file_path"], device=device)
 model: nn.Module
 
+discriminator_loss = get_trained_discriminators("SinGAN/logs/fully_trained_rgb", device=device)
+
 model_checkpoint_path = cfg.get("model", {}).get("checkpoint_path")
 if model_checkpoint_path is not None:
     print("Loading Checkpoint...")
@@ -65,9 +69,9 @@ if model_checkpoint_path is not None:
         model.load_state_dict(torch.load(f, map_location=device), strict=False)
 
 model.eval()
-img = Image.open("data/professional_photos/train/ali-inay-2273.png").convert("L")
+img = Image.open("data/professional_photos/train/ali-inay-2273.png")
 img_arr = (torch.tensor(np.array(img), dtype=torch.float32, device=device, requires_grad=False)/255)
-img_arr = img_arr[None, None, :256, :256].to(device)
+img_arr = img_arr[None, :512, :512, :].permute(0, 3, 1, 2)
 # with torch.no_grad():
 #     # start = time.time()
 #     # out = model.embed_artifacts(img_arr)
@@ -77,7 +81,9 @@ img_arr = img_arr[None, None, :256, :256].to(device)
 # model.visualize_output(out.cpu())
 # lp.print_stats()
 # print(out.shape)
-img_arr = torch.nn.functional.interpolate(img_arr, size=(512, 512), mode="bilinear", align_corners=True)
+# img_arr = torch.nn.functional.interpolate(img_arr, size=(512, 512), mode="bilinear", align_corners=True)
+compressed = model.embed_artifacts_without_resize(img_arr)
+l = discriminator_loss.forward(compressed, img_arr)
 blocks = model.img_to_blocks(img_arr)
 emb = model.clipper(model.ae(blocks))
 print(emb.mean(dim=0))
