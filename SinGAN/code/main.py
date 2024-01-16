@@ -22,6 +22,7 @@ import torch.utils.data.distributed
 
 
 from singan_models.generator_compressor import GeneratorWithCompression
+from singan_models.generator import Generator
 from singan_models.discriminator import Discriminator
 
 from singan_utils import makedirs, get_torch_device, formatted_print, save_checkpoint
@@ -151,7 +152,7 @@ def main_worker(gpu, ngpus_per_node, args):
     args.device = device
 
     discriminator = Discriminator(n_channels=args.n_channels)
-    generator = GeneratorWithCompression(args.img_size_min, args.num_scale, scale_factor, n_channels=args.n_channels, device=args.device)
+    generator = Generator(args.img_size_min, args.num_scale, scale_factor, n_channels=args.n_channels, device=args.device)
 
     networks = [discriminator, generator]
 
