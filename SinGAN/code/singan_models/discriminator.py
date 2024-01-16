@@ -34,8 +34,8 @@ class Discriminator(nn.Module):
     def progress(self):
         self.current_scale += 1
         # Lower scale discriminators are not used in later ... replace append to assign?
-        if self.current_scale % 4 == 0:
-            self.nf *= 2
+        # if self.current_scale % 4 == 0:
+        #     self.nf *= 2
 
         tmp_discriminator = nn.ModuleList()
         tmp_discriminator.append(nn.Sequential(nn.Conv2d(self.n_channels, self.nf, 3, 1, 1),
