@@ -4,7 +4,7 @@ import torch
 
 
 class Generator(nn.Module):
-    def __init__(self, img_size_min, num_scale, scale_factor=4/3, n_channels: int = 3):
+    def __init__(self, img_size_min, num_scale, scale_factor=4/3, n_channels: int = 3, *args, **kwargs):
         super(Generator, self).__init__()
         self.img_size_min = img_size_min
         self.scale_factor = scale_factor
