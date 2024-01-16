@@ -2,8 +2,9 @@ from torch import nn
 
 
 class Discriminator(nn.Module):
-    def __init__(self, n_layers_cpu: int = 0):
+    def __init__(self, n_channels: int = 3):
         super(Discriminator, self).__init__()
+        self.n_channels = n_channels
         self.nf = 32
         self.current_scale = 0
 
@@ -11,7 +12,7 @@ class Discriminator(nn.Module):
 
         first_discriminator = nn.ModuleList()
 
-        first_discriminator.append(nn.Sequential(nn.Conv2d(3, self.nf, 3, 1, 1),
+        first_discriminator.append(nn.Sequential(nn.Conv2d(n_channels, self.nf, 3, 1, 1),
                                              nn.LeakyReLU(2e-1)))
         for _ in range(3):
             first_discriminator.append(nn.Sequential(nn.Conv2d(self.nf, self.nf, 3, 1, 1),
