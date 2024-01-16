@@ -152,7 +152,7 @@ def main_worker(gpu, ngpus_per_node, args):
     args.device = device
 
     discriminator = Discriminator(n_channels=args.n_channels)
-    generator = Generator(args.img_size_min, args.num_scale, scale_factor, n_channels=args.n_channels, device=args.device)
+    generator = GeneratorWithCompression(args.img_size_min, args.num_scale, scale_factor, n_channels=args.n_channels, device=args.device)
 
     networks = [discriminator, generator]
 
