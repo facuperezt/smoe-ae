@@ -43,7 +43,7 @@ class GeneratorWithCompression(nn.Module):
 
     def forward(self, z, img=None):
         x_list = []
-        x_first = self.sub_generators[0](self.compressor.embed_artifacts_without_resize(z[0]))
+        x_first = self.sub_generators[0](self.compressor.embed_artifacts_without_resize(z[0]).detach())
         x_list.append(x_first)
 
         if img is not None:
@@ -54,7 +54,7 @@ class GeneratorWithCompression(nn.Module):
         for i in range(1, self.current_scale + 1):
             x_inter = F.interpolate(x_inter, (self.size_list[i], self.size_list[i]), mode='bilinear', align_corners=True)
             x_prev = x_inter
-            x_inter = x_inter + self.compressor.embed_artifacts_without_resize(z[i])
+            x_inter = self.compressor.embed_artifacts_without_resize(z[i])
             x_inter = self.sub_generators[i](x_inter) + x_prev
             x_list.append(x_inter)
 
