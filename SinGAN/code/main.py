@@ -32,6 +32,7 @@ from validation import validateSinGAN
 
 from utils import clear_gpu_cache
 
+from pytorch_memlab import MemReporter
 
 parser = argparse.ArgumentParser(description='PyTorch Simultaneous Training')
 parser.add_argument('--data_dir', default='data/', help='path to dataset')
@@ -280,12 +281,19 @@ def main_worker(gpu, ngpus_per_node, args):
         record_txt.write('IMGTOUSE\t:\t{}\n'.format(args.img_to_use))
         record_txt.close()
 
+
+    reporter = MemReporter()
     for stage in range(args.stage, args.num_scale + 1):
         if args.distributed:
             train_sampler.set_epoch(stage)
 
+        print(f"Before train: {stage}")
+        reporter.report()
         trainSinGAN(train_loader, networks, {"d_opt": d_opt, "g_opt": g_opt}, stage, args, {"z_rec": z_fix_list})
         validateSinGAN(train_loader, networks, stage, args, {"z_rec": z_fix_list})
+
+        print(f"After train: {stage}")
+        reporter.report()
 
         if args.distributed:
             discriminator.module.progress()
@@ -293,6 +301,9 @@ def main_worker(gpu, ngpus_per_node, args):
         else:
             discriminator.progress()
             generator.progress()
+
+        print(f"After progress: {stage}")
+        reporter.report()
 
         networks = [discriminator, generator]
 

@@ -8,6 +8,8 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 from models import Elvira2
 
+from pytorch_memlab import MemReporter
+
 class GeneratorWithCompression(nn.Module):
     def __init__(self, img_size_min, num_scale, scale_factor=4/3, n_channels: int = 3, device=torch.device('cpu')):
         super(GeneratorWithCompression, self).__init__()
