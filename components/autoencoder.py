@@ -9,6 +9,7 @@ from .elvira_helpers import PermuteAndFlatten, TorchSMoE_clipper
 __all__ = [
     'TorchSMoE_AE',
     'TorchSMoE_AE_Elvira',
+    'TorchSMoE_VAE',
 ]
 
 _base_network_architecture = {
@@ -192,5 +193,64 @@ class TorchSMoE_AE(torch.nn.Module):
         x = self.lin(x)
         x_smoe = self.fc_smoe_descriptions(x)
         x_comb = self.fc_global_infos(x)
-
+ 
         return x_smoe, x_comb
+
+
+class TorchSMoE_VAE(torch.nn.Module):
+    def __init__(self, n_kernels: int = 4, block_size: int = 8, n_channels: int = 1, img_size: int = 512, network_architecture: Optional[Dict] = None):
+        super().__init__()
+        self.n_kernels = n_kernels
+        self.block_size = block_size
+        self.n_channels = n_channels
+        self.img_size = img_size
+
+        self.num_smoe_params = 7*n_kernels # (3 params) x,y,z for all kernels + (1 param) n for all kernels + (3 params) Ch. Decomp. for all kernels
+
+        if network_architecture is None:
+            network_architecture = _base_network_architecture
+
+        network_architecture["conv"]["channel_sizes"] = [n_channels] + network_architecture["conv"]["channel_sizes"]
+        network_architecture["lin"]["feature_sizes"] = [network_architecture["conv"]["channel_sizes"][-1] * block_size**2] + network_architecture["lin"]["feature_sizes"]
+
+                ### Convolutional layers ###
+        conv_layers = []
+        _batchnorm = network_architecture["conv"]["add_batchnorm"]
+        for out_channels, in_channels in zip(
+            network_architecture["conv"]["channel_sizes"][1:],
+            network_architecture["conv"]["channel_sizes"][:-1]
+            ):
+            conv_layers.append(ConvBlock(in_channels, out_channels, ker_size=(3,3), padd=1, add_batchnorm=_batchnorm))
+        conv_layers.append(torch.nn.Flatten())
+
+                ### Dense layers ###
+        means_dense_layers = []
+        _batchnorm = network_architecture["lin"]["add_batchnorm"] if "add_batchnorm" in network_architecture["lin"].keys() else False
+        _dropout = network_architecture["lin"]["dropout"] if "dropout" in network_architecture["lin"].keys() else 0
+        for out_features, in_features in zip(
+            network_architecture["lin"]["feature_sizes"][1:],
+            network_architecture["lin"]["feature_sizes"][:-1]
+            ):
+            means_dense_layers.append(LinearBlock(in_features, out_features, add_batchnorm=_batchnorm, dropout=_dropout))
+        # 2 times the params, one is the mean and the other is the log-var
+        means_dense_layers.append(torch.nn.Linear(network_architecture["lin"]["feature_sizes"][-1], 2*self.num_smoe_params))
+
+
+        self.conv = torch.nn.Sequential(*conv_layers)
+        self.lin = torch.nn.Sequential(*means_dense_layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Applies the forward pass of the AE_SMoE model.
+        
+        Returns:
+        --------
+
+        Tuple(Means, Log-Variances)
+        """
+        if len(x.shape) == 3:
+            x = x.unsqueeze(1)
+        x = self.conv(x)
+        x = self.lin(x)
+
+        return x[:, :self.num_smoe_params], x[:, self.num_smoe_params:]

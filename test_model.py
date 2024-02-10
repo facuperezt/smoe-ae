@@ -60,7 +60,7 @@ train_loader.initialize()
 model = Elvira2(config_file_path=cfg["model"]["cfg_file_path"], device=device)
 model: nn.Module
 
-discriminator_loss = get_trained_discriminators("SinGAN/logs/fully_trained_rgb", device=device)
+# discriminator_loss = get_trained_discriminators("SinGAN/logs/fully_trained_rgb", device=device)
 
 model_checkpoint_path = cfg.get("model", {}).get("checkpoint_path")
 if model_checkpoint_path is not None:
@@ -83,7 +83,7 @@ img_arr = img_arr[None, :512, :512, :].permute(0, 3, 1, 2)
 # print(out.shape)
 # img_arr = torch.nn.functional.interpolate(img_arr, size=(512, 512), mode="bilinear", align_corners=True)
 compressed = model.embed_artifacts_without_resize(img_arr)
-l = discriminator_loss.forward(compressed, img_arr)
+# l = discriminator_loss.forward(compressed, img_arr)
 blocks = model.img_to_blocks(img_arr)
 emb = model.clipper(model.ae(blocks))
 print(emb.mean(dim=0))

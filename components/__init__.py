@@ -1,4 +1,4 @@
-from .autoencoder import TorchSMoE_AE, TorchSMoE_AE_Elvira
+from .autoencoder import TorchSMoE_AE, TorchSMoE_AE_Elvira, TorchSMoE_VAE
 from .block_img_block import Img2Block, Block2Img
 from .block_offseter import OffsetBlock
 from .global_mean_corrector import GlobalMeanOptimizer

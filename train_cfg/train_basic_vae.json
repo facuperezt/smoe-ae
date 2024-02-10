@@ -1,0 +1,22 @@
+{
+  "gpu": true,
+  "wandb": false,
+  "optimizer": {
+    "name": "AdamW",
+    "lr": 1e-5,
+    "weight_decay": 0.01
+  },
+  "scheduler": {
+    "gamma": 0.98
+  },
+  "batch_size": -10,
+  "num_epochs": 1000,
+  "model": {
+    "cfg_file_path": "models/cfg_files/train_basic_vae.json",
+    "checkpoint_path": null
+  },
+  "data": {
+    "name": "professional_photos",
+    "path": "professional_photos"
+  }
+}

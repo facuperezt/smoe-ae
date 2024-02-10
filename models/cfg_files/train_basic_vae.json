@@ -1,0 +1,39 @@
+{
+    "n_kernels": 4,
+    "block_size": 16,
+    "img_size": 512,
+    "n_channels": 1,
+    "img2block": {
+        "block_size": "$block_size",
+        "img_size": "$img_size"
+    },
+
+    "ae": {
+        "n_kernels": "$n_kernels",
+        "block_size": "$block_size",
+        "img_size": "$img_size",
+        "n_channels": "$n_channels",
+        "network_architecture": {
+            "conv": {
+                "channel_sizes": [8, 32, 128, 512],
+                "add_batchnorm": false,
+                "dropout": 0.0
+            },
+            "lin": {
+                "feature_sizes": [512, 256, 128, 64],
+                "add_batchnorm": false,
+                "dropout": 0.0
+            }
+        }
+    },
+
+    "smoe": {
+        "n_kernels": "$n_kernels",
+        "block_size": "$block_size"
+    },
+
+    "block2img": {
+        "block_size": "$block_size",
+        "img_size": "$img_size"
+    }
+}

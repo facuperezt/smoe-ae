@@ -102,11 +102,15 @@ class TorchSMoE_AE(torch.nn.Module):
 
         for layer, wandb in zip(self.conv[::2], conv.values()):
             weights, biases = wandb["weight"], wandb["bias"]
+            assert weights.shape == layer.weight.shape
+            assert biases.shape == layer.bias.shape
             layer.weight.data = weights.clone()
             layer.bias.data = biases.clone()
 
         for layer, wandb in zip(self.lin[::2], lin.values()):
             weights, biases = wandb["weight"], wandb["bias"]
+            assert weights.shape == layer.weight.shape
+            assert biases.shape == layer.bias.shape
             layer.weight.data = weights.clone()
             layer.bias.data = biases.clone()
 
