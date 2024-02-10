@@ -45,7 +45,7 @@ class BserejePipeline(torch.nn.Module):
         y <-- Original image
         z <-- latent space distribution parameters
         """
-        reconstruction_loss = torch.nn.functional.mse_loss(x, y)  # MSE
+        reconstruction_loss = torch.nn.functional.mse_loss(x.squeeze(), y)  # MSE
         kl_div = -0.5 * torch.sum(
             1 + z_log_var - z_mean**2 - torch.exp(z_log_var),  # 1 + log(sigma^2) - mu^2 - sigma^2
             dim=-1
