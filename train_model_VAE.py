@@ -63,7 +63,6 @@ scheduler = CosineAnnealingWarmupRestarts(
         warmup_steps=cfg["scheduler"]["warmup_steps"],
         gamma=cfg["scheduler"]["gamma"]
     )
-
 log_cfg = {
     **model.cfg,
     "optimizer": cfg["optimizer"],

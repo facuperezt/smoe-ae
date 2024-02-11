@@ -50,6 +50,7 @@ class CosineAnnealingWarmupRestarts(LRScheduler):
     def init_lr(self):
         self.base_lrs = []
         for param_group in self.optimizer.param_groups:
+            param_group["initial_lr"] = self.min_lr
             param_group['lr'] = self.min_lr
             self.base_lrs.append(self.min_lr)
     
