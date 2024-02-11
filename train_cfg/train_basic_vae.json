@@ -1,6 +1,6 @@
 {
   "gpu": true,
-  "wandb": false,
+  "wandb": true,
   "optimizer": {
     "name": "AdamW",
     "lr": 1e-5,
