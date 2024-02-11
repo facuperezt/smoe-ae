@@ -1,10 +1,10 @@
 {
   "gpu": true,
-  "wandb": false,
+  "wandb": true,
   "optimizer": {
     "name": "AdamW",
     "lr": 1e-5,
-    "weight_decay": 0.01
+    "weight_decay": 1e-6
   },
   "scheduler": {
     "first_cycle_steps": 50,
@@ -14,7 +14,7 @@
     "gamma": 0.98
   },
   "batch_size": -10,
-  "num_epochs": 10000,
+  "num_epochs": 1000,
   "model": {
     "cfg_file_path": "models/cfg_files/train_basic_vae.json",
     "checkpoint_path": null

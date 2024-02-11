@@ -57,7 +57,7 @@ class BserejePipeline(torch.nn.Module):
             dim=-1
         ).mean()
 
-        return self.alpha*reconstruction_loss + self.beta*kl_div
+        return self.alpha*reconstruction_loss + self.beta*kl_div, (self.alpha*reconstruction_loss).detach(), (self.beta*kl_div).detach()
 
     def old_loss(self, x, y, return_separate_losses: bool = False):
         if return_separate_losses:

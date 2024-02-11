@@ -95,19 +95,20 @@ for epoch in range(cfg["num_epochs"]):
             output, z_mean, z_logvar = model(_input)
 
             # Compute the loss
-            loss = criterion(output, _label, z_mean, z_logvar)
+            loss, rec_loss, kl_div = criterion(output, _label, z_mean, z_logvar)
 
             loss.backward()
             loss_mean = loss.mean().detach()
             total_loss_mean += loss_mean
 
+            # Log the loss for this batch to WandB
+            wandb.log(flatten_dict({"Reconstruction Loss": rec_loss, "KL Loss": kl_div, "Total Loss": loss, "Learning Rate": scheduler.get_last_lr()[0]}))
         # Update the weights
         optimizer.step()
         scheduler.step()
+        model.step()
         print("Mean Loss: ", total_loss_mean)
 
-        # Log the loss for this epoch to WandB
-        wandb.log(flatten_dict({"Losses": loss, "Total Loss": loss, "Learning Rate": scheduler.get_last_lr()[0]}))
 
     # Save the model if the loss is lower than the historic loss
     if not historic_loss or loss_mean < historic_loss[-1]:
