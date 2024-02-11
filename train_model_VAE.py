@@ -109,7 +109,12 @@ for epoch in range(cfg["num_epochs"]):
             mean_total_loss += loss.detach()
             mean_rec_loss += rec_loss
             mean_kl_div += kl_div
-
+        if not mean_total_loss.abs() + mean_rec_loss.abs() + mean_kl_div.abs() > 0:
+            """
+            There's something slightly off with the batching which creates an empty batch, so it has loss 0 every time
+            just skip it since loss 0 wont be reached anyway.
+            """
+            continue
         # Log the loss for this batch to WandB
         wandb.log(flatten_dict({"Reconstruction Loss": mean_rec_loss, "KL Loss": mean_kl_div, "Total Loss": mean_total_loss, "Learning Rate": scheduler.get_last_lr()[0]}))
         # Update the weights
