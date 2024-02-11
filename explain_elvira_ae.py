@@ -74,7 +74,8 @@ def plot(model, kernel_nr: int = 0):
     canonizers = [SequentialMergeBatchNorm()]
     composite = EpsilonGammaBox(low=-3., high=3., canonizers=canonizers)
 
-    data = torch.load("utils/tmp_files/tmp_out.th").view(1, 1, 8, 8).to(device)/255
+    block_size = model.block_size
+    data = torch.load("utils/tmp_files/tmp_out.th").view(1, 1, block_size, block_size).to(device)/255
     _model = model.ae 
     _out = model.ae(data)
 
@@ -83,7 +84,7 @@ def plot(model, kernel_nr: int = 0):
     rec = model.smoe(clipped)
     # rec_img = model.blocks_to_img(rec)
 
-    block_size = model.block_size
+    
     padding = [2, 2, 2, 2]
 
     fig, axs = plt.subplots(3, 2)

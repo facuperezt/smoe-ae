@@ -1,4 +1,10 @@
 # SMoE #
+## Analysis tool ##
+#### Usage ####
+```
+python utils/draw_block.py <block_size>
+```
+block size must match the one in the cfg file being loaded
 ## Model Design ##
 ![great_modeling_choices](https://github.com/facuperezt/smoe-ae/assets/32981593/c1e94e46-b6de-47bf-bf1c-27f048bd3c15)
 
