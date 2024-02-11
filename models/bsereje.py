@@ -25,7 +25,13 @@ class BserejePipeline(torch.nn.Module):
         self.sample = SampleFromDistribution("Normal")
         self.smoe = SMoE(**self.cfg['smoe']).to(device)
         self.block2img = Block2Img(**self.cfg['block2img']).to(device)
+        self.alpha = self.cfg["loss_function"]["alpha"].to(device)
+        self.beta = self.cfg["loss_function"]["beta"].to(device)
         
+    def step(self):
+        if self.beta < 1:
+            self.alpha += 0.1
+            self.beta += 0.1
 
     def forward(self, x: torch.Tensor):
         x_blocked: torch.Tensor = self.img2block(x)
@@ -51,7 +57,7 @@ class BserejePipeline(torch.nn.Module):
             dim=-1
         ).mean()
 
-        return 10*reconstruction_loss + kl_div
+        return self.alpha*reconstruction_loss + self.beta*kl_div
 
     def old_loss(self, x, y, return_separate_losses: bool = False):
         if return_separate_losses:

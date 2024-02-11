@@ -1,12 +1,16 @@
 {
   "gpu": true,
-  "wandb": true,
+  "wandb": false,
   "optimizer": {
     "name": "AdamW",
     "lr": 1e-5,
     "weight_decay": 0.01
   },
   "scheduler": {
+    "first_cycle_steps": 50,
+    "cycle_mult": 1.2,
+    "min_lr": 1e-8,
+    "warmup_steps": 10,
     "gamma": 0.98
   },
   "batch_size": -10,

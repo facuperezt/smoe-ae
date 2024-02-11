@@ -35,5 +35,10 @@
     "block2img": {
         "block_size": "$block_size",
         "img_size": "$img_size"
+    },
+
+    "loss_function": {
+        "alpha": 1,
+        "beta": 0
     }
 }

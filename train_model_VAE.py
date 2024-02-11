@@ -9,8 +9,8 @@ import wandb  # Add this import
 from models import Asereje, BserejePipeline as Bsereje
 import argparse
 from data import DataLoader
-from utils import flatten_dict, sum_nested_dicts
-from torch.optim.lr_scheduler import ExponentialLR
+from utils import flatten_dict, sum_nested_dicts, CosineAnnealingWarmupRestarts
+from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, ChainedScheduler
 
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
@@ -52,16 +52,31 @@ criterion = model.loss
 
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=cfg["optimizer"]["lr"], weight_decay=cfg["optimizer"]["weight_decay"])
-num_epochs = 100
-scheduler = ExponentialLR(optimizer, gamma=cfg["scheduler"]["gamma"])
+
+# scheduler = ExponentialLR(optimizer, gamma=cfg["scheduler"]["gamma"])
+scheduler = CosineAnnealingWarmupRestarts(
+        optimizer=optimizer,
+        first_cycle_steps=cfg["scheduler"]["first_cycle_steps"],
+        cycle_mult=cfg["scheduler"]["cycle_mult"],
+        max_lr=cfg["optimizer"]["lr"],
+        min_lr=cfg["scheduler"]["min_lr"],
+        warmup_steps=cfg["scheduler"]["warmup_steps"],
+        gamma=cfg["scheduler"]["gamma"]
+    )
+
+log_cfg = {
+    **model.cfg,
+    "optimizer": cfg["optimizer"],
+    "scheduler": cfg["scheduler"],
+    }
 
 # Initialize WandB
-wandb.init(project="SMoE with VAE", name="Using KL-Div - No Batchnorm - No Dropout", config={**model.cfg, "optimizer": cfg["optimizer"], "scheduler": cfg["scheduler"]}, mode="online" if cfg["wandb"] else "disabled")
+wandb.init(project="SMoE with VAE", name="Using KL-Div - No Batchnorm - No Dropout", config=log_cfg, mode="online" if cfg["wandb"] else "disabled")
 #%%
 historic_loss = []
 
 # Training loop
-for epoch in range(num_epochs):
+for epoch in range(cfg["num_epochs"]):
     # Set model to training mode
     model.train()
 
@@ -74,26 +89,26 @@ for epoch in range(num_epochs):
         # Zero the gradients
         optimizer.zero_grad()
 
-        total_loss_mean = 0
+        total_loss_mean = torch.tensor([0], dtype= torch.float32, device=device)
         for _input, _label in tqdm.tqdm(zip(inputs, labels), total=len(inputs), desc=f"Batch {i}"):
             # Forward pass
             output, z_mean, z_logvar = model(_input)
 
             # Compute the loss
             loss = criterion(output, _label, z_mean, z_logvar)
-            # total_loss = sum_nested_dicts(loss)
+
             loss.backward()
-            loss_mean = loss.mean().item()
+            loss_mean = loss.mean().detach()
             total_loss_mean += loss_mean
 
         # Update the weights
         optimizer.step()
+        scheduler.step()
         print("Mean Loss: ", total_loss_mean)
 
         # Log the loss for this epoch to WandB
         wandb.log(flatten_dict({"Losses": loss, "Total Loss": loss, "Learning Rate": scheduler.get_last_lr()[0]}))
 
-    scheduler.step()
     # Save the model if the loss is lower than the historic loss
     if not historic_loss or loss_mean < historic_loss[-1]:
         # Save the trained model
