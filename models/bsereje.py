@@ -30,8 +30,8 @@ class BserejePipeline(torch.nn.Module):
         
     def step(self):
         if self.beta < 1:
-            self.alpha += 0.1
-            self.beta += 0.1
+            # self.alpha += 0.01
+            self.beta += 0.01
 
     def forward(self, x: torch.Tensor):
         x_blocked: torch.Tensor = self.img2block(x)

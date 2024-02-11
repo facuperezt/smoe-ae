@@ -86,28 +86,38 @@ for epoch in range(cfg["num_epochs"]):
         inputs = inputs.to(device)
         labels = labels.to(device)
 
+        batch_size = inputs.shape[0]
+
         # Zero the gradients
         optimizer.zero_grad()
 
-        total_loss_mean = torch.tensor([0], dtype= torch.float32, device=device)
+        mean_total_loss = torch.tensor([0], dtype= torch.float32, device=device)
+        mean_rec_loss = torch.tensor([0], dtype=torch.float32, device=device)
+        mean_kl_div = torch.tensor([0], dtype=torch.float32, device=device)
         for _input, _label in tqdm.tqdm(zip(inputs, labels), total=len(inputs), desc=f"Batch {i}"):
             # Forward pass
             output, z_mean, z_logvar = model(_input)
 
             # Compute the loss
             loss, rec_loss, kl_div = criterion(output, _label, z_mean, z_logvar)
+            
+            loss = torch.div(loss, batch_size)
+            rec_loss = torch.div(rec_loss, batch_size)
+            kl_div = torch.div(kl_div, batch_size)
 
             loss.backward()
-            loss_mean = loss.mean().detach()
-            total_loss_mean += loss_mean
+
+            mean_total_loss += loss.detach()
+            mean_rec_loss += rec_loss
+            mean_kl_div += kl_div
 
         # Log the loss for this batch to WandB
-        wandb.log(flatten_dict({"Reconstruction Loss": rec_loss, "KL Loss": kl_div, "Total Loss": loss, "Learning Rate": scheduler.get_last_lr()[0]}))
+        wandb.log(flatten_dict({"Reconstruction Loss": mean_rec_loss, "KL Loss": mean_kl_div, "Total Loss": mean_total_loss, "Learning Rate": scheduler.get_last_lr()[0]}))
         # Update the weights
         optimizer.step()
         scheduler.step()
         model.step()
-        print("Mean Loss: ", total_loss_mean)
+        print("Mean Loss: ", mean_total_loss, "Mean Rec Loss: ", mean_rec_loss, "Mean KL Loss: ", mean_kl_div)
 
 
     # Save the model if the loss is lower than the historic loss
