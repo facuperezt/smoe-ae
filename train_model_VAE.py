@@ -101,8 +101,8 @@ for epoch in range(cfg["num_epochs"]):
             loss_mean = loss.mean().detach()
             total_loss_mean += loss_mean
 
-            # Log the loss for this batch to WandB
-            wandb.log(flatten_dict({"Reconstruction Loss": rec_loss, "KL Loss": kl_div, "Total Loss": loss, "Learning Rate": scheduler.get_last_lr()[0]}))
+        # Log the loss for this batch to WandB
+        wandb.log(flatten_dict({"Reconstruction Loss": rec_loss, "KL Loss": kl_div, "Total Loss": loss, "Learning Rate": scheduler.get_last_lr()[0]}))
         # Update the weights
         optimizer.step()
         scheduler.step()
