@@ -25,8 +25,8 @@ class BserejePipeline(torch.nn.Module):
         self.sample = SampleFromDistribution("Normal")
         self.smoe = SMoE(**self.cfg['smoe']).to(device)
         self.block2img = Block2Img(**self.cfg['block2img']).to(device)
-        self.alpha = self.cfg["loss_function"]["alpha"].to(device)
-        self.beta = self.cfg["loss_function"]["beta"].to(device)
+        self.alpha = torch.tensor(self.cfg["loss_function"]["alpha"], dtype=torch.float32).to(device)
+        self.beta = torch.tensor(self.cfg["loss_function"]["beta"], dtype=torch.float32).to(device)
         
     def step(self):
         if self.beta < 1:
