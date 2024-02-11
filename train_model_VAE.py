@@ -121,12 +121,12 @@ for epoch in range(cfg["num_epochs"]):
 
 
     # Save the model if the loss is lower than the historic loss
-    if not historic_loss or loss_mean < historic_loss[-1]:
+    if not historic_loss or mean_total_loss < historic_loss[-1]:
         # Save the trained model
         torch.save(model.state_dict(), f'models/saves/last_run/_epoch_{epoch}.pth')
 
-    historic_loss.append(loss_mean)
-    if epoch > 25 and all([abs(new_loss) >= abs(old_loss) for new_loss, old_loss in zip(historic_loss[-5:], historic_loss[-6:-1])]):
+    historic_loss.append(mean_total_loss)
+    if epoch > 50 and all([abs(new_loss) >= abs(old_loss) for new_loss, old_loss in zip(historic_loss[-5:], historic_loss[-6:-1])]):
         break
 
 # Save the model at the end of training
