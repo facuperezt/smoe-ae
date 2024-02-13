@@ -28,6 +28,14 @@ def hscroll(event):
         event.widget.configure(background=bg)
     window.refresh()
 
+def make_white(event):
+    event.widget.configure(background="#FFFFFF")
+    window.refresh()
+
+def make_black(event):
+    event.widget.configure(background="#000000")
+    window.refresh()
+
 def vscroll(event):
     delta = int(event.delta/120)
     if delta > 0:
@@ -105,6 +113,9 @@ for y in range(rows):
         # element.Widget.configure(takefocus=0)
         element.Widget.bind('<MouseWheel>', vscroll)
         element.Widget.bind('<Shift-MouseWheel>', hscroll)
+        element.Widget.bind('<Button-1>', make_white)
+        element.Widget.bind('<Button-2>', make_black)
+        element.Widget.bind('<Button-3>', make_black)
         # element.ParentRowFrame.bind('<MouseWheel>', vscroll)
         # element.ParentRowFrame.bind('<Shift-MouseWheel>', hscroll)
 
