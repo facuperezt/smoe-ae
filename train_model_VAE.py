@@ -92,14 +92,14 @@ def get_next_count(parent_dir, base_name):
     return max_count + 1
 
 # Check if the folder exists
-if os.path.exists(r'models\saves\last_run'):
-    parent_dir = os.path.dirname(r'models\saves\last_run')
+if os.path.exists('models/saves/last_run'):
+    parent_dir = os.path.dirname('models/saves/last_run')
     # Get the next count number for the new folder name
     next_count = get_next_count(parent_dir, 'archived_run')
     # Create a new name for the folder by appending the next count
     new_folder_name = f"archived_run_{next_count}"
     # Rename the folder
-    os.rename(r'models\saves\last_run', os.path.join(parent_dir, new_folder_name))
+    os.rename('models/saves/last_run', os.path.join(parent_dir, new_folder_name))
 os.mkdir("models/saves/last_run/")
 
 # Training loop
