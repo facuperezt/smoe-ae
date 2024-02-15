@@ -11,7 +11,7 @@
     "cycle_mult": 1.2,
     "min_lr": 0,
     "warmup_steps": 100,
-    "gamma": 0.98
+    "gamma": 0.999
   },
   "batch_size": 1,
   "num_epochs": 5000,
