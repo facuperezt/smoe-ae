@@ -47,23 +47,23 @@ class DataLoader:
             yield data[i:i+batch_size], data[i:i+batch_size]
         yield data[i+batch_size:], data[i+batch_size:]
 
-    def initialize(self, force_reinitialize: bool = False) -> None:
+    def initialize(self, n_repeats: int = 3, force_reinitialize: bool = False) -> None:
         train_pkl_not_found = not os.path.exists(f"{self.training_data_path}/train.pkl")
         valid_pkl_not_found = not os.path.exists(f"{self.validation_data_path}/valid.pkl")
         if force_reinitialize:
-            self.fill_training_data(use_saved=False)
-            self.fill_validation_data(use_saved=False)
+            self.fill_training_data(use_saved=False, n_repeats=n_repeats)
+            self.fill_validation_data(use_saved=False, n_repeats=n_repeats)
             self.initialized = True
             return
         
         if train_pkl_not_found:
-            self.fill_training_data(use_saved=False)
+            self.fill_training_data(use_saved=False, n_repeats=n_repeats)
         else:
-            self.fill_training_data()
+            self.fill_training_data(n_repeats=n_repeats)
         if valid_pkl_not_found:
-            self.fill_validation_data(use_saved=False)
+            self.fill_validation_data(use_saved=False, n_repeats=n_repeats)
         else:
-            self.fill_validation_data()
+            self.fill_validation_data(n_repeats=n_repeats)
         self.initialized = True
         
 

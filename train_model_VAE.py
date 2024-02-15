@@ -1,5 +1,6 @@
 #%%
 import json
+import re
 import tqdm
 from typing import Optional
 import torch
@@ -11,6 +12,7 @@ import argparse
 from data import DataLoader
 from utils import flatten_dict, sum_nested_dicts, CosineAnnealingWarmupRestarts
 from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, ChainedScheduler
+import os
 
 # Add argparse to load model from a path
 parser = argparse.ArgumentParser()
@@ -37,7 +39,7 @@ else:
 
 # Define your dataloader
 train_loader = DataLoader(data_path)
-train_loader.initialize()
+train_loader.initialize(n_repeats=1, force_reinitialize=True)
 
 # Define your model
 model = Bsereje(model_cfg_file_path, device=device)
@@ -53,16 +55,16 @@ criterion = model.loss
 # Define your optimizer
 optimizer = optim.AdamW(model.parameters(), lr=cfg["optimizer"]["lr"], weight_decay=cfg["optimizer"]["weight_decay"])
 
-# scheduler = ExponentialLR(optimizer, gamma=cfg["scheduler"]["gamma"])
-scheduler = CosineAnnealingWarmupRestarts(
-        optimizer=optimizer,
-        first_cycle_steps=cfg["scheduler"]["first_cycle_steps"],
-        cycle_mult=cfg["scheduler"]["cycle_mult"],
-        max_lr=cfg["optimizer"]["lr"],
-        min_lr=cfg["scheduler"]["min_lr"],
-        warmup_steps=cfg["scheduler"]["warmup_steps"],
-        gamma=cfg["scheduler"]["gamma"]
-    )
+scheduler = ExponentialLR(optimizer, gamma=cfg["scheduler"]["gamma"])
+# scheduler = CosineAnnealingWarmupRestarts(
+#         optimizer=optimizer,
+#         first_cycle_steps=cfg["scheduler"]["first_cycle_steps"],
+#         cycle_mult=cfg["scheduler"]["cycle_mult"],
+#         max_lr=cfg["optimizer"]["lr"],
+#         min_lr=cfg["scheduler"]["min_lr"],
+#         warmup_steps=cfg["scheduler"]["warmup_steps"],
+#         gamma=cfg["scheduler"]["gamma"]
+#     )
 log_cfg = {
     **model.cfg,
     "optimizer": cfg["optimizer"],
@@ -73,6 +75,32 @@ log_cfg = {
 wandb.init(project="SMoE with VAE", name="Using KL-Div - No Batchnorm - No Dropout", config=log_cfg, mode="online" if cfg["wandb"] else "disabled")
 #%%
 historic_loss = []
+
+# Function to get the next count for the folder name
+def get_next_count(parent_dir, base_name):
+    # Regular expression to match folders with the base name followed by a count
+    pattern = re.compile(f'^{base_name}_(\\d+)$')
+    max_count = 0
+    for item in os.listdir(parent_dir):
+        if os.path.isdir(os.path.join(parent_dir, item)):
+            match = pattern.match(item)
+            if match:
+                # Extract the count number and update max_count if higher
+                count = int(match.group(1))
+                if count > max_count:
+                    max_count = count
+    return max_count + 1
+
+# Check if the folder exists
+if os.path.exists(r'models\saves\last_run'):
+    parent_dir = os.path.dirname(r'models\saves\last_run')
+    # Get the next count number for the new folder name
+    next_count = get_next_count(parent_dir, 'archived_run')
+    # Create a new name for the folder by appending the next count
+    new_folder_name = f"archived_run_{next_count}"
+    # Rename the folder
+    os.rename(r'models\saves\last_run', os.path.join(parent_dir, new_folder_name))
+os.mkdir("models/saves/last_run/")
 
 # Training loop
 for epoch in range(cfg["num_epochs"]):
@@ -130,7 +158,7 @@ for epoch in range(cfg["num_epochs"]):
         torch.save(model.state_dict(), f'models/saves/last_run/_epoch_{epoch}.pth')
 
     historic_loss.append(mean_total_loss)
-    if epoch > 50 and all([abs(new_loss) >= abs(old_loss) for new_loss, old_loss in zip(historic_loss[-5:], historic_loss[-6:-1])]):
+    if epoch > 5000 and all([abs(new_loss) >= abs(old_loss) for new_loss, old_loss in zip(historic_loss[-5:], historic_loss[-6:-1])]):
         break
 
 # Save the model at the end of training
