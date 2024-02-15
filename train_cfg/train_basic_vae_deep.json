@@ -3,7 +3,7 @@
   "wandb": true,
   "optimizer": {
     "name": "AdamW",
-    "lr": 1e-6,
+    "lr": 1e-5,
     "weight_decay": 1e-6
   },
   "scheduler": {
