@@ -65,7 +65,7 @@ class DatasetFolder(data.Dataset):
     Args:
         root (string): Root directory path.
         loader (callable): A function to load a sample given its path.
-        extensions (list[string]): A list of allowed extensions.
+        extensions (List[string]): A list of allowed extensions.
         transform (callable, optional): A function/transform that takes in
             a sample and returns a transformed version.
             E.g, ``transforms.RandomCrop`` for images.

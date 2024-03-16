@@ -68,7 +68,7 @@ args = parser.parse_args()
 # G = Generator(args.img_size_min, num_scale)
 # D = Discriminator()
 #
-# z_list = [F.pad(torch.randn(args.batch_size, 3, size_list[i], size_list[i]), [5, 5, 5, 5], value=-1) for i in range(num_scale + 1)]
+# z_list = [F.pad(torch.randn(args.batch_size, 3, size_List[i], size_List[i]), [5, 5, 5, 5], value=-1) for i in range(num_scale + 1)]
 #
 # print('latent vector sizes')
 # for z in z_list:

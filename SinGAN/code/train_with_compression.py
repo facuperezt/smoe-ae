@@ -48,13 +48,13 @@ def trainSinGAN_with_compression(data_loader, networks, opts, stage, args, addit
 
     x_in = x_in.to(args.device, non_blocking=True)
     x_org = x_in
-    x_in = F.interpolate(x_in, (args.size_list[stage], args.size_list[stage]), mode='bilinear', align_corners=True)
+    x_in = F.interpolate(x_in, (args.size_List[stage], args.size_List[stage]), mode='bilinear', align_corners=True)
     vutils.save_image(x_in.detach().cpu(), os.path.join(args.res_dir, 'ORGTRAIN_{}.png'.format(stage)),
                       nrow=1, normalize=True)
 
     x_in_list = [x_in]
     for xidx in range(1, stage + 1):
-        x_tmp = F.interpolate(x_org, (args.size_list[xidx], args.size_list[xidx]), mode='bilinear', align_corners=True)
+        x_tmp = F.interpolate(x_org, (args.size_List[xidx], args.size_List[xidx]), mode='bilinear', align_corners=True)
         x_in_list.append(x_tmp)
 
     for i in t_train:
@@ -71,20 +71,20 @@ def trainSinGAN_with_compression(data_loader, networks, opts, stage, args, addit
 
             x_rec_list = G(z_rec)
 
-            g_rec = F.mse_loss(x_rec_list[-1], x_in)
+            g_rec = F.mse_loss(x_rec_List[-1], x_in)
             # calculate rmse for each scale
             rmse_list = [1.0]
             for rmseidx in range(1, stage + 1):
-                rmse = torch.sqrt(F.mse_loss(x_rec_list[rmseidx], x_in_list[rmseidx]))
+                rmse = torch.sqrt(F.mse_loss(x_rec_List[rmseidx], x_in_List[rmseidx]))
                 rmse_list.append(rmse)
 
-            z_list = [F.pad(rmse_list[z_idx] * torch.randn(args.batch_size, 3, args.size_list[z_idx],
-                                               args.size_list[z_idx]).to(args.device, non_blocking=True),
+            z_list = [F.pad(rmse_List[z_idx] * torch.randn(args.batch_size, 3, args.size_List[z_idx],
+                                               args.size_List[z_idx]).to(args.device, non_blocking=True),
                             [5, 5, 5, 5], value=0) for z_idx in range(stage + 1)]
 
             x_fake_list = G(z_list)
 
-            g_fake_logit = D(x_fake_list[-1])
+            g_fake_logit = D(x_fake_List[-1])
 
             ones = torch.ones_like(g_fake_logit).to(args.device)
 
@@ -114,7 +114,7 @@ def trainSinGAN_with_compression(data_loader, networks, opts, stage, args, addit
             d_opt.zero_grad()
             x_fake_list = G(z_list)
 
-            d_fake_logit = D(x_fake_list[-1].detach())
+            d_fake_logit = D(x_fake_List[-1].detach())
             d_real_logit = D(x_in)
 
             ones = torch.ones_like(d_real_logit).to(args.device)
@@ -124,7 +124,7 @@ def trainSinGAN_with_compression(data_loader, networks, opts, stage, args, addit
                 # wgan gp
                 d_fake = torch.mean(d_fake_logit, (2, 3))
                 d_real = -torch.mean(d_real_logit, (2, 3))
-                d_gp = compute_grad_gp_wgan(D, x_in, x_fake_list[-1], args.gpu)
+                d_gp = compute_grad_gp_wgan(D, x_in, x_fake_List[-1], args.gpu)
                 d_loss = d_real + d_fake + 0.1 * d_gp
             elif args.gantype == 'zerogp':
                 # zero centered GP
@@ -147,4 +147,4 @@ def trainSinGAN_with_compression(data_loader, networks, opts, stage, args, addit
             d_losses.update(d_loss.item(), x_in.size(0))
 
         t_train.set_description('Stage: [{}/{}] Avg Loss: D[{d_losses.avg:.3f}] G[{g_losses.avg:.3f}] RMSE[{rmse:.3f}]'
-                                .format(stage, args.num_scale, d_losses=d_losses, g_losses=g_losses, rmse=rmse_list[-1]))
+                                .format(stage, args.num_scale, d_losses=d_losses, g_losses=g_losses, rmse=rmse_List[-1]))

@@ -259,8 +259,8 @@ def main_worker(gpu, ngpus_per_node, args):
     ######################
     # Validate and Train #
     ######################
-    z_fix_list = [torch.randn(args.batch_size, args.n_channels, args.size_list[0], args.size_list[0])]
-    zero_list = [torch.zeros(args.batch_size, args.n_channels, args.size_list[zeros_idx], args.size_list[zeros_idx]) for zeros_idx in range(1, args.num_scale + 1)]
+    z_fix_list = [torch.randn(args.batch_size, args.n_channels, args.size_List[0], args.size_List[0])]
+    zero_list = [torch.zeros(args.batch_size, args.n_channels, args.size_List[zeros_idx], args.size_List[zeros_idx]) for zeros_idx in range(1, args.num_scale + 1)]
     z_fix_list = z_fix_list + zero_list
 
     if args.validation:

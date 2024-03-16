@@ -1,7 +1,7 @@
 import torch
 
 class RDFTConv(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: tuple[int, int] = (3, 3), freq_domain_size: tuple[int, int] = (3, 2), corr: bool = True,
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), freq_domain_size: Tuple[int, int] = (3, 2), corr: bool = True,
                  stride: int = 2, padding: int = 1, device: torch.device = "cpu", name: str = ""):
         """
         I am fking guessing how this works in TF under the hood. But this in theory should work.

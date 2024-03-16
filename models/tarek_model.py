@@ -58,7 +58,7 @@ class MixedActivation(torch.nn.Module):
         return x
     
 class ExtraLayerPerClass(torch.nn.Module):
-    def __init__(self, n_kernels: int = 4, group_sizes: tuple[int, int, int] = (3, 2, 1), group_activation: tuple[torch.nn.Module, torch.nn.Module, torch.nn.Module] = None, device: torch.device = torch.device("cpu")):
+    def __init__(self, n_kernels: int = 4, group_sizes: Tuple[int, int, int] = (3, 2, 1), group_activation: Tuple[torch.nn.Module, torch.nn.Module, torch.nn.Module] = None, device: torch.device = torch.device("cpu")):
         super().__init__()
         if group_activation is None:
             group_activation = (torch.nn.Sigmoid(), torch.nn.Softplus(), None)
@@ -274,8 +274,8 @@ class TorchSMoE_clipper(torch.nn.Module):
     def __init__(
             self,
             n_kernels: int = 4,
-            group_sizes: tuple[int, int, int] = (3, 2, 1),
-            clip_borders: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] = None,
+            group_sizes: Tuple[int, int, int] = (3, 2, 1),
+            clip_borders: Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]] = None,
     ):
         super().__init__()
         self.n_kernels = n_kernels

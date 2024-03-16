@@ -52,7 +52,7 @@ class GeneratorWithCompression(nn.Module):
             x_inter = x_first
 
         for i in range(1, self.current_scale + 1):
-            x_inter = F.interpolate(x_inter, (self.size_list[i], self.size_list[i]), mode='bilinear', align_corners=True)
+            x_inter = F.interpolate(x_inter, (self.size_List[i], self.size_List[i]), mode='bilinear', align_corners=True)
             x_prev = x_inter
             x_inter = self.compressor.embed_artifacts_without_resize(z[i].detach())
             x_inter = self.sub_generators[i](x_inter) + x_prev
