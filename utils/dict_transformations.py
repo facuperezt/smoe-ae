@@ -15,6 +15,8 @@ def flatten_dict(d: Dict[str, Union[Dict, torch.Tensor]]) -> Dict[str, torch.Ten
     return flattened_dict
 
 def sum_nested_dicts(d: Dict[str, torch.Tensor]) -> torch.Tensor:
+    if not isinstance(d, Dict):
+        return d.sum()
     total = 0
     for value in d.values():
         if isinstance(value, Dict):

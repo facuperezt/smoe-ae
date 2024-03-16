@@ -25,7 +25,7 @@ data_path = cfg["data"]["path"]
 
 # Model configs
 model_cfg_file_path = cfg["model"]["cfg_file_path"]
-model_checkpoint_path = cfg["model"]["checkpoint_path"]
+model_checkpoint_path = cfg["model"].get("checkpoint_path")
 
 # Initialize WandB
 wandb.init(project="SMoE with funky encoder", name="With Block-wise Loss and BatchNorm", mode="online" if cfg["wandb"] else "disabled")
@@ -82,7 +82,8 @@ for epoch in range(num_epochs):
 
             # Compute the loss
             loss = criterion(output, _label)
-            total_loss = sum_nested_dicts(loss)
+            total_loss = loss
+            # total_loss = sum_nested_dicts(loss)
             total_loss.backward()
             total_loss_mean += total_loss.item()/len(inputs)
 

@@ -271,19 +271,35 @@ class TorchSMoE_clipper(torch.nn.Module):
     """
     The center and nus clipping layer
     """
-    def __init__(self, n_kernels: int = 4):
+    def __init__(
+            self,
+            n_kernels: int = 4,
+            group_sizes: tuple[int, int, int] = (3, 2, 1),
+            clip_borders: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] = None,
+    ):
         super().__init__()
         self.n_kernels = n_kernels
+        self.group_sizes = group_sizes
+        if clip_borders is None:
+            clip_borders = ((None, None), (0., 50.), (-50., 50.))
+        self.clip_borders = clip_borders
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # As_offset = 3 * self.n_kernels
-        # center_nus=x[:,0:As_offset]
-        # As=x[:,As_offset:]
-        # center_nus=torch.clip(center_nus, min=0.0, max=1.0)
-        # return torch.cat([center_nus,As],axis=1)
-        x[:, 3*self.n_kernels:5*self.n_kernels] = torch.clip(x[:, 3*self.n_kernels:5*self.n_kernels], 0.0, 50)
-        x[:, 5*self.n_kernels:] = torch.clip(x[:, 5*self.n_kernels:], -50, 50)
-        return x
+        out = []
+        _base = 0
+        for i, (group_size, (low, high)) in enumerate(zip(self.group_sizes, self.clip_borders)):
+            if low is None and high is None:
+                out.append(x[:, _base:_base + group_size*self.n_kernels])
+            else:
+                out.append(torch.clip(x[:, _base:_base + group_size*self.n_kernels], low, high))
+            _base += group_size*self.n_kernels
+        return torch.cat(out, dim=1)
+
+    # def forward(self, x: torch.Tensor) -> torch.Tensor:
+    #     x[:, 3*self.n_kernels:5*self.n_kernels] = torch.clip(x[:, 3*self.n_kernels:5*self.n_kernels], 0.0, 50)
+    #     x[:, 5*self.n_kernels:] = torch.clip(x[:, 5*self.n_kernels:], -50, 50)
+    #     return x
     
 class TorchSMoE_SMoE(torch.nn.Module):
     """

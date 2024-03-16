@@ -12,7 +12,8 @@
   "batch_size": -10,
   "num_epochs": 100,
   "model": {
-    "cfg_file_path": "models/cfg_files/tarek_model.json"
+    "cfg_file_path": "models/cfg_files/tarek_model.json",
+    "checkpoint_path": null
   },
   "data": {
     "name": "professional_images",
