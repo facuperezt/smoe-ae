@@ -1,3 +1,4 @@
+from typing import Tuple
 import torch
 
 class RDFTConv(torch.nn.Module):

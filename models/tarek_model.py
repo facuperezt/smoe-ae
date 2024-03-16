@@ -5,7 +5,7 @@ import os
 import itertools
 import pickle
 import time
-from typing import Union
+from typing import Tuple, Union
 from PIL import Image
 import cv2
 
