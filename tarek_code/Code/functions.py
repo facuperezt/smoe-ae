@@ -38,9 +38,9 @@ def standard_8(x, latent_depth, n_layers = 100):
         nonlocal i
         if i < n_layers:
             i += 1
-            return i, False
+            return False
         i+=1
-        return i, True
+        return True
 
     x = conv_down_two(16, (3, 3), name="layer_1", activation=gdn.GDN(name="gdn_1"))(x)
     if update_i_return(n_layers): return x

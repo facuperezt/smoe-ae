@@ -117,7 +117,7 @@ class TorchSMoE_AE(torch.nn.Module):
         if len(x.shape) == 3:
             x = x[:, None, :, :]
         verbose = False
-        i = 0
+        i = -1
         for corr in self.corr:
             i += 1
             if verbose:
@@ -473,12 +473,8 @@ class TarekModel(TorchSMoE):
             print(get_gpu_memory_usage(self.device))
 
     def loss(self, x, y, return_separate_losses: bool = False):
-        if return_separate_losses:
-            return {
-                "e2e_loss": self.loss_function(x, y),
-                }
-        else:
-            return {"e2e_loss": sum(self.loss_function(x, y).values())}
+        # MSE pytorch
+        return torch.pow(x - y, 2).mean()
         
     def embed_artifacts(self, x: torch.Tensor) -> torch.Tensor:
         """

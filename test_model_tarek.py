@@ -84,7 +84,7 @@ img_arr = img_arr[x_min:x_min+512, y_min:y_min+512]
 inp = torch.tensor(img_arr)
 # inp = torch.tensor(inp, requires_grad=True)
 inp_b = model.img_to_blocks(inp).reshape(-1 , 8, 8)
-ae_o = model.ae(inp_b, 1)
+ae_o = model.ae(inp_b)
 smoe_o = model.smoe(ae_o)
 out = model.blocks_to_img(smoe_o)
 
@@ -99,22 +99,28 @@ from tarek_code.Code.load_model import load_model
 t_img = pickle.load(open("tarek_code/pickles/baboon_ref.pckl", "rb"))["img_blocked"]
 t_img = np.reshape(t_img, (-1, t_img.shape[2], t_img.shape[3]))
 #%%
+def get_tarek_model_description(i):
+    return [a.name for a in load_model(i)[0].weights]
+
 def get_res(img, i):
     def tarek(img, i):
         t_model, g = load_model(i)
         return t_model(img).numpy().transpose(0, 3, 1, 2)
     def mine(img, i):
         return model.ae(torch.tensor(img, dtype=torch.float32, device=model.device), i).detach().cpu().numpy()
-    t, m = tarek(img, i), mine(img, i)
+    t, m = tarek(img, i), mine(img, 2*i)
     if t.shape == m.shape:
         return t, m
     else:
+        print(t.shape)
+        print(m.shape)
         return None, None
 
-t, m = get_res(t_img, 1)
 # %%
+t, m = get_res(t_img, 2)
 def plot_tm(t, m):
     ch, w, h = t.shape
+    print(t.shape)
     # plot each channel side by side
     fig, axs = plt.subplots(ch, 2, figsize=(5, 30))
     for i in range(ch):

@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import wandb  # Add this import
-from models import Asereje, AserejeOnlyE2E
+from models import Asereje, TarekModel
 import argparse
 from data import DataLoader
 from utils import flatten_dict, sum_nested_dicts
@@ -44,7 +44,7 @@ train_loader = DataLoader(data_path)
 train_loader.initialize()
 
 # Define your model
-model = AserejeOnlyE2E(model_cfg_file_path, device=device)
+model = TarekModel(model_cfg_file_path, device=device)
 model: nn.Module
 #%%
 if model_checkpoint_path is not None:

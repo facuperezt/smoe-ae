@@ -4,13 +4,23 @@ import argparse
 import sys
 import os
 sys.path.append(os.path.join(sys.path[0], os.pardir))
-from explain_elvira_ae import load_model, plot
+from explain_elvira_ae import load_model as elvira_load_model, plot
+from explain_tarek_ae import load_model as tarek_load_model
 
 parser = argparse.ArgumentParser()
 parser.add_argument("block_size", type=int, choices=[8, 16], default=16, help="Size of the blocks. Just an int. Assumes square images.")
 args = parser.parse_args()
 
-model = load_model()
+def load_model(who: str, block_size: int = None) -> torch.nn.Module:
+    if block_size is None:
+        block_size = args.block_size
+    if who == "elvira":
+        return elvira_load_model(block_size)
+    elif who == "tarek":
+        return tarek_load_model(block_size)
+    else:
+        raise ValueError(f"Who is {who}?")
+
 
 def hscroll(event):
     delta = int(event.delta/120)
@@ -94,6 +104,7 @@ option2 = {'resolution':1, 'pad':(0, 0), 'disable_number_display':True,
 right_col_layout = [
     [sg.InputText("0", k="kernel_nr", size=(5,1), tooltip="kernel to analyze"),],
     [sg.Button("Store Image"),],
+    [sg.Combo(["elvira", "tarek"], default_value="elvira", k="model_name")],
     [sg.Button("Plot")],
     [sg.Text("", k="kernels_expert_weight")]
 
@@ -128,6 +139,7 @@ while True:
     elif event == 'Store Image':
         make_torch_tensor(window)
     elif event == 'Plot':
+        model = load_model(window["model_name"].get())
         kernels_expert_weight = plot(model, int(window["kernel_nr"].get()))
         window["kernels_expert_weight"].update(str([round(a, 3) for a in kernels_expert_weight.tolist()]))
 window.close()

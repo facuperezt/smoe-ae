@@ -27,8 +27,8 @@ from SinGAN.code.get_trained_discriminators import get_trained_discriminators
 # lp_wrapper2 = lp(Elvira2.embed_artifacts_without_resize)
 
 # %%
-def load_model():
-    cfg_file_path = "train_cfg/elvira_model.json"
+def load_model(block_size: int = 16) -> torch.nn.Module:
+    cfg_file_path = f"train_cfg/elvira_model_{block_size}.json"
     with open(cfg_file_path, "r") as f:
         cfg = json.load(f)
 
