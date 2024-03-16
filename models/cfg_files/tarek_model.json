@@ -13,7 +13,7 @@
         "block_size": "$block_size",
         "img_size": "$img_size",
         "n_channels": "$n_channels",
-        "load_tf_model": true
+        "load_tf_model": false
     },
 
     "clipper": {
