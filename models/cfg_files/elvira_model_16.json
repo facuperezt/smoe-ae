@@ -1,0 +1,50 @@
+{
+    "n_kernels": 4,
+    "block_size": 16,
+    "img_size": 512,
+    "n_channels": 1,
+    "img2block": {
+        "block_size": "$block_size",
+        "img_size": "$img_size"
+    },
+
+    "ae": {
+        "n_kernels": "$n_kernels",
+        "block_size": "$block_size",
+        "img_size": "$img_size",
+        "n_channels": "$n_channels",
+        "load_tf_model": true
+    },
+
+    "clipper": {
+        "n_kernels": "$n_kernels"
+    },
+    
+    "smoe": {
+        "n_kernels": "$n_kernels",
+        "block_size": "$block_size"
+    },
+
+    "block2img": {
+        "block_size": "$block_size",
+        "img_size": "$img_size"
+    },
+
+    "loss_function": {
+        "loss_type": "l1_l2",
+        "alpha": 0.8,
+        "beta": 0.7
+    },
+
+    "blockwise_loss_function": {
+        "loss_type": "l1_l2",
+        "alpha": 0.8,
+        "beta": 0.7,
+        "ssim_args": {
+            "data_range": 1.0
+        },
+        "ms_ssim_args": {
+            "data_range": 1.0
+        }
+    }
+}
