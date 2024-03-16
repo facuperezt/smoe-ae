@@ -180,3 +180,7 @@ resources/
 # Scalene
 profile.html
 profile.json
+
+*.pckl
+*.pkl
+tarek_code/Trainingcheckpoint/
