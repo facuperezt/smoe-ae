@@ -6,3 +6,5 @@ from .positional_encoder import PositionalEncoding1D, PositionalEncodingPermute1
 from .smoe import TorchSMoE_SMoE
 from .loss_functions import MixedLossFunction
 from .elvira_helpers import TorchSMoE_clipper
+from .gdn import GDN
+from .rdft_convolution import RDFTConv

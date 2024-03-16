@@ -1,0 +1,21 @@
+{
+  "gpu": true,
+  "wandb": false,
+  "optimizer": {
+    "name": "AdamW",
+    "lr": 0.001,
+    "weight_decay": 0.01
+  },
+  "scheduler": {
+    "gamma": 0.98
+  },
+  "batch_size": -10,
+  "num_epochs": 100,
+  "model": {
+    "cfg_file_path": "models/cfg_files/tarek_model.json"
+  },
+  "data": {
+    "name": "professional_images",
+    "path": "./professional_photos"
+  }
+}
