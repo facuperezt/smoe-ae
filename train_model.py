@@ -1,3 +1,4 @@
+import os
 import torch
 import json
 from data import DataLoader
@@ -24,5 +25,7 @@ for epoch in range(10):
         loss.backward()
         print(f"Epoch {epoch}, Batch {i}, Loss {loss.item()}")
         optimizer.step()
+    scheduler.step(loss)
 
+os.makedirs("models/facu/checkpoints", exist_ok=True)
 torch.save(model.state_dict(), "models/facu/checkpoints/vae.pth")
