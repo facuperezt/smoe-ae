@@ -30,6 +30,10 @@ class DataLoader:
         self.validation_data_path = os.path.join(os.path.realpath(__file__).split("dataloader.py")[0], data_path, "valid")
         self.initialized = False
 
+    @property
+    def training(self):
+        return self.get("train", None, 1)
+
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
         if data == "train":
             data = torch.cat(self.training_data[:limit_to], dim=0)
@@ -42,7 +46,7 @@ class DataLoader:
         if batch_size == 0:
             batch_size = len(data)
         elif batch_size < 0:
-            batch_size = int(len(data)/(-batch_size))
+            batch_size = max(1, int(len(data)/(-batch_size)))
         for i in range(0, len(data), batch_size):
             yield data[i:i+batch_size], data[i:i+batch_size]
         yield data[i+batch_size:], data[i+batch_size:]
