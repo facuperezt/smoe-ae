@@ -54,16 +54,18 @@ for model, model_name, lr in zip(
     Image.fromarray(valid_pic.numpy()*255).convert("L").save(f"models/facu/images2/{model_name}/original.jpeg")
     valid_pic = valid_pic.to(device)
     try:
-        for epoch in tqdm.tqdm(range(30), "Epoch: "):
+        for epoch in tqdm.tqdm(range(200), "Epoch: "):
             for batch, (x_batch, _) in enumerate(train_loader.get("train", None, -5)):
                 optimizer.zero_grad()
+                total_loss = torch.tensor(0.0, device=device)
                 for i, x in enumerate(x_batch):
                     x = x.to(device)
 
                     x_hat, x, mu, log_var = model(x)
                     loss = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)['loss']
-                    loss.backward()
+                    total_loss += loss
                 print(f"Batch {batch}, Loss {loss.item()}")
+                total_loss.backward()
                 optimizer.step()
 
                 # Save image
