@@ -6,7 +6,7 @@ from data import DataLoader
 from models.facu import VAE, VAE_KernelsOutside, VAE_NegativeExperts, VAE_KernelsOutsideNegativeExperts, SimpleMLP
 from models.elvira import Vanilla
 
-n_kernels, block_size, img_size = 2, 8, 128
+n_kernels, block_size, img_size = 2, 4, 128
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
 train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
@@ -64,8 +64,9 @@ for model, model_name, lr in zip(
                     x_hat, x, mu, log_var = model(x)
                     loss = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)['loss']
                     total_loss += loss
+                    if i != 0 and i % 20 == 0:
+                        total_loss.backward()  # Has to be computed on every few batches to prevent memory leaks
                 print(f"Batch {batch}, Loss {loss.item()}")
-                total_loss.backward()
                 optimizer.step()
 
                 # Save image
