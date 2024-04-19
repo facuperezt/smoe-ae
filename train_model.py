@@ -58,14 +58,20 @@ for model, model_name, lr in zip(
             for batch, (x_batch, _) in enumerate(train_loader.get("train", None, -5)):
                 optimizer.zero_grad()
                 total_loss = torch.tensor(0.0, device=device)
+                loss_present = False
                 for i, x in enumerate(x_batch):
                     x = x.to(device)
 
                     x_hat, x, mu, log_var = model(x)
                     loss = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)['loss']
                     total_loss += loss
-                    if i != 0 and i % 20 == 0:
+                    loss_present = True
+                    if torch.cuda.memory_allocated() > 5e9:
                         total_loss.backward()  # Has to be computed on every few batches to prevent memory leaks
+                        total_loss = torch.tensor(0.0, device=device)
+                        loss_present = False
+                if loss_present:
+                    total_loss.backward()
                 print(f"Batch {batch}, Loss {loss.item()}")
                 optimizer.step()
 
