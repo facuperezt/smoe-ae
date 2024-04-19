@@ -1,6 +1,6 @@
 import torch
 
-from models.components.encoders.variational_encoder import VanillaVAE
+from models.components.encoders.variational_encoder import VanillaVAE, NegativeExpertsVAE, KernelsOutsideVAE, KernelsOutsideNegativeExpertsVAE
 from models.components.decoders.smoe_decoder import VanillaSMoE
 
 from utils import Img2Block, Block2Img
@@ -49,3 +49,30 @@ class VAE(torch.nn.Module):
 
         loss = recons_loss + kld_weight * kld_loss
         return {'loss': loss, 'Reconstruction_Loss':recons_loss.detach(), 'KLD':-kld_loss.detach()}
+
+class VAE_NegativeExperts(VAE):
+    def __init__(self, n_kernels: int = 4, block_size: int = 8, img_size: int = 512, load_tf_model: bool = False, device: str = "cuda"):
+        super().__init__()
+        self.device = device
+        self.img2block = Img2Block(block_size, img_size)
+        self.encoder = NegativeExpertsVAE(1, n_kernels, block_size, None).to(device)
+        self.decoder = VanillaSMoE(n_kernels, block_size, device=device)
+        self.block2img = Block2Img(block_size, img_size)
+
+class VAE_KernelsOutside(VAE):
+    def __init__(self, n_kernels: int = 4, block_size: int = 8, img_size: int = 512, load_tf_model: bool = False, device: str = "cuda"):
+        super().__init__()
+        self.device = device
+        self.img2block = Img2Block(block_size, img_size)
+        self.encoder = KernelsOutsideVAE(1, n_kernels, block_size, None).to(device)
+        self.decoder = VanillaSMoE(n_kernels, block_size, device=device)
+        self.block2img = Block2Img(block_size, img_size)
+
+class VAE_KernelsOutsideNegativeExperts(VAE):
+    def __init__(self, n_kernels: int = 4, block_size: int = 8, img_size: int = 512, load_tf_model: bool = False, device: str = "cuda"):
+        super().__init__()
+        self.device = device
+        self.img2block = Img2Block(block_size, img_size)
+        self.encoder = KernelsOutsideNegativeExpertsVAE(1, n_kernels, block_size, None).to(device)
+        self.decoder = VanillaSMoE(n_kernels, block_size, device=device)
+        self.block2img = Block2Img(block_size, img_size)

@@ -27,11 +27,11 @@ class Clipper(torch.nn.Module):
         return torch.cat([center_nus,As],axis=1)
 
 class Vanilla(torch.nn.Module):
-    def __init__(self, n_kernels: int = 4, block_size: int = 8, img_size: int = 512, load_tf_model: bool = False, device: str = "cuda"):
+    def __init__(self, n_kernels: int = 4, block_size: int = 8, img_size: int = 512, load_tf_model: bool = False, device: str = "cuda", **kwargs):
         super().__init__()
         self.device = device
         self.img2block = Img2Block(block_size, img_size)
-        self.encoder = ElviraVanillaAE(n_kernels, block_size)
+        self.encoder = ElviraVanillaAE(n_kernels, block_size, **kwargs)
         self.clipper = Clipper(n_kernels)
         self.decoder = VanillaSMoE(n_kernels, block_size, device=device)
         self.block2img = Block2Img(block_size, img_size)
@@ -43,12 +43,24 @@ class Vanilla(torch.nn.Module):
         self.encoder.to(device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        _x = x.clone()
         x = self.img2block(x)
         x = self.encoder(x)
         x = self.clipper(x)
         x = self.decoder(x)
         x = self.block2img(x)
-        return x
+        return x, _x, None, None
+    
+    def loss_function(self,
+                      *args,
+                      **kwargs) -> dict:
+        recons = args[0]
+        input = args[1]
+
+        recons_loss = torch.nn.functional.mse_loss(recons, input)
+
+        loss = recons_loss
+        return {'loss': loss, 'Reconstruction_Loss':recons_loss.detach()}
     
     def load_from_tf_smoe(self, path_to_pkl: str) -> None:
         with open(path_to_pkl, "rb") as f:

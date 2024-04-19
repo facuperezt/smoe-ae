@@ -172,7 +172,10 @@ class BlockImgBlock(torch.nn.Module):
 
 class Img2Block(BlockImgBlock):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.img_to_blocks(x)
+        if 2 <= x.ndim <= 3:
+            return self.img_to_blocks(x)
+        elif x.ndim == 4:
+            return torch.stack([self.img_to_blocks(x[i]) for i in range(x.shape[0])])
     
 class Block2Img(BlockImgBlock):
     def forward(self, x: torch.Tensor) -> torch.Tensor:

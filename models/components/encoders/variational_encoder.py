@@ -1,6 +1,13 @@
 from typing import List, Tuple
 import torch
 
+__all__ = [
+    'VanillaVAE',
+    'KernelsOutsideVAE',
+    'NegativeExpertsVAE',
+    'KernelsOutsideNegativeExpertsVAE',
+]
+
 class CustomLastLayerActivations(torch.nn.Module):
     def __init__(self, group_sizes: Tuple[int], activations: Tuple):
         super().__init__()
@@ -38,7 +45,8 @@ class VanillaVAE(torch.nn.Module):
         conv_modules = []
         if hidden_dims is None:
             # Same as Elvira's model?
-            hidden_dims = [16, 32, 64, 128, 256, 512, 1024]
+            # hidden_dims = [16, 32, 64, 128, 256, 512, 1024]
+            hidden_dims = [16, 32, 64]
 
         # Build Encoder
         for h_dim in hidden_dims:
@@ -76,7 +84,7 @@ class VanillaVAE(torch.nn.Module):
 
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
-            (ShiftedSigmoid(shift=-1, scale=3), torch.nn.Tanh(), torch.nn.Identity())
+            (torch.nn.Sigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
             )
 
     def encode(self, input: torch.Tensor) -> List[torch.Tensor]:
@@ -111,9 +119,49 @@ class VanillaVAE(torch.nn.Module):
         out = self.output_nonlinearities(out)
         return out
     
-    def forward(self, input: torch.Tensor, **kwargs) -> torch.Tensor:
-        if len(input.shape) == 3:
-            input = input[:, None, :, :]
-        mu, log_var = self.encode(input)
+    def forward(self, x: torch.Tensor, **kwargs) -> torch.Tensor:
+        if len(x.shape) == 3:
+            x = x[:, None, :, :]
+        mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         return z, mu, log_var
+
+
+class KernelsOutsideVAE(VanillaVAE):
+    def __init__(self,
+                 in_channels: int = 1,
+                 n_kernels: int = 4,
+                 block_size: int = 16,
+                 hidden_dims: List = None,
+                 **kwargs) -> None:
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, **kwargs)
+        self.output_nonlinearities = CustomLastLayerActivations(
+            (2*n_kernels, 1*n_kernels, 4*n_kernels),
+            (ShiftedSigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
+            )
+        
+class NegativeExpertsVAE(VanillaVAE):
+    def __init__(self,
+                 in_channels: int = 1,
+                 n_kernels: int = 4,
+                 block_size: int = 16,
+                 hidden_dims: List = None,
+                 **kwargs) -> None:
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, **kwargs)
+        self.output_nonlinearities = CustomLastLayerActivations(
+            (2*n_kernels, 1*n_kernels, 4*n_kernels),
+            (torch.nn.Sigmoid(), torch.nn.Tanh(), torch.nn.Identity())
+            )
+
+class KernelsOutsideNegativeExpertsVAE(VanillaVAE):
+    def __init__(self,
+                 in_channels: int = 1,
+                 n_kernels: int = 4,
+                 block_size: int = 16,
+                 hidden_dims: List = None,
+                 **kwargs) -> None:
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, **kwargs)
+        self.output_nonlinearities = CustomLastLayerActivations(
+            (2*n_kernels, 1*n_kernels, 4*n_kernels),
+            (ShiftedSigmoid(), torch.nn.Tanh(), torch.nn.Identity())
+            )

@@ -4,12 +4,14 @@ import torch
 from torchvision.transforms import v2, ToTensor, Grayscale
 import os
 from PIL import Image
+import tqdm
 
 
 def initialize_transforms(img_size: int = 512):
     transforms = v2.Compose([
         ToTensor(),
         Grayscale(),
+        v2.RandomCrop(size=(img_size, img_size)),
         v2.RandomResizedCrop(size=(img_size, img_size), antialias=True),
         v2.RandomHorizontalFlip(p=0.5),
         v2.RandomVerticalFlip(p=0.5),
@@ -32,7 +34,7 @@ class DataLoader:
 
     @property
     def training(self):
-        return self.get("train", None, 1)
+        return self.get("train", None, 3)
 
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
         if data == "train":
@@ -77,7 +79,7 @@ class DataLoader:
                 self.training_data = pickle.load(f)
                 return
             
-        for image_path in os.listdir(self.training_data_path):
+        for image_path in tqdm.tqdm(os.listdir(self.training_data_path), "Filling Training Set: "):
             if image_path.startswith(".") or image_path.endswith(".pkl"):
                 continue
             img = Image.open(os.path.join(self.training_data_path, image_path))
@@ -92,7 +94,7 @@ class DataLoader:
             with open(f"{self.validation_data_path}/valid.pkl", "rb") as f:
                 self.validation_data = pickle.load(f)
                 return
-        for image_path in os.listdir(self.validation_data_path):
+        for image_path in tqdm.tqdm(os.listdir(self.validation_data_path), "Filling Test Set: "):
             if image_path.startswith(".") or image_path.endswith(".pkl"):
                 continue
             img = Image.open(os.path.join(self.validation_data_path, image_path))

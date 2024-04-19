@@ -184,3 +184,8 @@ profile.json
 *.pckl
 *.pkl
 tarek_code/Trainingcheckpoint/
+
+gifs/
+**.jpeg
+**.pth
+**.png

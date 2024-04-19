@@ -24,7 +24,7 @@ class PermuteAndFlatten(torch.nn.Module):
         return x
 
 class ElviraVanillaAE(torch.nn.Module):
-    def __init__(self, n_kernels: int = 4, block_size: int = 8):
+    def __init__(self, n_kernels: int = 4, block_size: int = 8, **kwargs):
         """
         Initializes the Conv2d and Linear (Dense in tensorflow) layers according to AE_SMoE paper.
         """
@@ -32,16 +32,30 @@ class ElviraVanillaAE(torch.nn.Module):
         self.n_kernels = n_kernels
         self.block_size = block_size
         conv_layers = []
-        for out_channels, in_channels in zip([16, 32, 64, 128, 256, 512, 1024], [1, 16, 32, 64, 128, 256, 512]):
-            conv_layers.append(torch.nn.Conv2d(in_channels, out_channels, kernel_size=(3,3), padding=1, dtype=torch.float32))
-            conv_layers.append(torch.nn.ReLU())
-        conv_layers.append(PermuteAndFlatten())
+        force_conv_layers = kwargs.get("force_conv_layers", None)
+        if force_conv_layers is None:
+            for out_channels, in_channels in zip([16, 32, 64, 128, 256, 512, 1024], [1, 16, 32, 64, 128, 256, 512]):
+                conv_layers.append(torch.nn.Conv2d(in_channels, out_channels, kernel_size=(3,3), padding=1, dtype=torch.float32))
+                conv_layers.append(torch.nn.ReLU())
+            conv_layers.append(PermuteAndFlatten())
+        else:
+            for out_channels, in_channels in zip(force_conv_layers, [1] + force_conv_layers[:-1]):
+                conv_layers.append(torch.nn.Conv2d(in_channels, out_channels, kernel_size=(3,3), padding=1, dtype=torch.float32))
+                conv_layers.append(torch.nn.ReLU())
+            conv_layers.append(PermuteAndFlatten())
         
         dense_layers = []
-        for out_features, in_features in zip([1024, 512, 256, 128, 64], [1024*block_size**2, 1024, 512, 256, 128]):
-            dense_layers.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
-            dense_layers.append(torch.nn.ReLU())
-        dense_layers.append(torch.nn.Linear(64, 7*n_kernels, dtype=torch.float32))
+        force_dense_layers = kwargs.get("force_dense_layers", None)
+        if force_dense_layers is None:
+            for out_features, in_features in zip([1024, 512, 256, 128, 64], [1024*block_size**2, 1024, 512, 256, 128]):
+                dense_layers.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
+                dense_layers.append(torch.nn.ReLU())
+            dense_layers.append(torch.nn.Linear(64, 7*n_kernels, dtype=torch.float32))
+        else:
+            for out_features, in_features in zip(force_dense_layers, [out_channels*block_size**2] + force_dense_layers[:-1]):
+                dense_layers.append(torch.nn.Linear(in_features, out_features, dtype=torch.float32))
+                dense_layers.append(torch.nn.ReLU())
+            dense_layers.append(torch.nn.Linear(out_features, 7*n_kernels, dtype=torch.float32))
 
         self.conv = torch.nn.Sequential(*conv_layers)
         self.lin = torch.nn.Sequential(*dense_layers)
