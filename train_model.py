@@ -8,7 +8,7 @@ from models.elvira import Vanilla
 
 n_kernels, block_size, img_size = 2, 4, 128
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
-train_loader.initialize(n_repeats=5, force_reinitialize=False)
+train_loader.initialize(n_repeats=5, force_reinitialize=True)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
@@ -17,9 +17,9 @@ for model, model_name, lr in zip(
             # Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
             # Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]),
             VAE(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
-            # VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
-            # VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
-            # VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
+            VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
+            VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
+            VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
             # SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device),
             # SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2]),
         ],
@@ -27,9 +27,9 @@ for model, model_name, lr in zip(
             # "elvira",
             # "elvira_small",
             "vae_kernels_inside",
-            # "vae_kernels_outside",
-            # "vae_negative_experts",
-            # "vae_kernels_outside_negative_experts",
+            "vae_kernels_outside",
+            "vae_negative_experts",
+            "vae_kernels_outside_negative_experts",
             # "mlp",
             # "mlp_big",
         ],
@@ -37,16 +37,16 @@ for model, model_name, lr in zip(
             # 1e-3,
             # 1e-4,
             1e-4,
-            # 1e-4,
-            # 1e-4,
-            # 1e-4,
+            1e-4,
+            1e-4,
+            1e-4,
             # 1e-4,
             # 1e-4,
         ]
     ):
     print(f"Number of params for model '{model_name}': {sum(p.numel() for p in model.parameters())}")
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.33, patience=5, verbose=True)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.33, patience=20, verbose=True)
 
     os.makedirs(f"models/facu/checkpoints/{model_name}", exist_ok=True)
     os.makedirs(f"models/facu/images2/{model_name}", exist_ok=True)
@@ -54,7 +54,7 @@ for model, model_name, lr in zip(
     Image.fromarray(valid_pic.numpy()*255).convert("L").save(f"models/facu/images2/{model_name}/original.jpeg")
     valid_pic = valid_pic.to(device)
     try:
-        for epoch in tqdm.tqdm(range(200), "Epoch: "):
+        for epoch in tqdm.tqdm(range(50), "Epoch: "):
             for batch, (x_batch, _) in enumerate(train_loader.get("train", None, -5)):
                 optimizer.zero_grad()
                 total_loss = torch.tensor(0.0, device=device)
