@@ -51,7 +51,7 @@ for model, model_name, lr in zip(
         ]
     ):
     # start disabled run
-    run = wandb.init(project="somoe", entity="facu", job_type="train", mode="online",
+    run = wandb.init(mode="online",
                      name=model_name, group="vae",
                      config={
                         "n_kernels": n_kernels,
