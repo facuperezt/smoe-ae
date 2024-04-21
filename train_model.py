@@ -7,7 +7,7 @@ from models.facu import VAE, VAE_KernelsOutside, VAE_NegativeExperts, VAE_Kernel
 from models.elvira import Vanilla
 import wandb
 
-n_kernels, block_size, img_size = 2, 4, 128
+n_kernels, block_size, img_size = 3, 8, 256
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
 train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
