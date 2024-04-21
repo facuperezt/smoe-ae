@@ -9,25 +9,14 @@ import wandb
 
 n_kernels, block_size, img_size = 3, 8, 256
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
-train_loader.initialize(n_repeats=5, force_reinitialize=True)
+train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
 hidden_dims = [32, 64, 128, 256, 512]
 
-nr_epochs = 500
+nr_epochs = 1
 
-# start disabled run
-run = wandb.init(project="somoe", entity="facu", job_type="train", mode="disabled",
-                 config={
-                    "n_kernels": n_kernels,
-                    "block_size": block_size,
-                    "img_size": img_size,
-                    "hidden_dims": hidden_dims,
-                    "device": device,
-                    "epochs": nr_epochs,
-                 }
-            )
 
 for model, model_name, lr in zip(
         [
@@ -61,6 +50,19 @@ for model, model_name, lr in zip(
             # 1e-4,
         ]
     ):
+    # start disabled run
+    run = wandb.init(project="somoe", entity="facu", job_type="train", mode="disabled",
+                     name=model_name, group="vae",
+                     config={
+                        "n_kernels": n_kernels,
+                        "block_size": block_size,
+                        "img_size": img_size,
+                        "hidden_dims": hidden_dims,
+                        "device": device,
+                        "epochs": nr_epochs,
+                        "initial_lr": lr,
+                    }
+                )
     print(f"Number of params for model '{model_name}': {sum(p.numel() for p in model.parameters())}")
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.33, patience=20, verbose=False)
@@ -119,3 +121,4 @@ for model, model_name, lr in zip(
     finally:
         # Save final model
         torch.save(model.state_dict(), f"models/facu/checkpoints/{model_name}/final.pth")
+        wandb.finish(0)
