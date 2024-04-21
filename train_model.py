@@ -42,10 +42,10 @@ for model, model_name, lr in zip(
         [
             # 1e-3,
             # 1e-4,
-            1e-4,
-            1e-4,
-            1e-4,
-            1e-4,
+            5e-4,
+            5e-4,
+            5e-4,
+            5e-4,
             # 1e-4,
             # 1e-4,
         ]
