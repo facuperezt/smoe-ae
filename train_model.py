@@ -13,9 +13,9 @@ train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-hidden_dims = [8, 16]
+hidden_dims = [32, 32, 64, 64, 128, 128, 256, 256]
 
-nr_epochs = 1
+nr_epochs = 250
 
 
 for model, model_name, lr in zip(
@@ -51,7 +51,7 @@ for model, model_name, lr in zip(
         ]
     ):
     # start disabled run
-    run = wandb.init(project="somoe", entity="facu", job_type="train", mode="disabled",
+    run = wandb.init(project="somoe", entity="facu", job_type="train", mode="online",
                      name=model_name, group="vae",
                      config={
                         "n_kernels": n_kernels,
