@@ -36,6 +36,12 @@ class DataLoader:
     def training(self):
         return self.get("train", None, 3)
 
+    def get_valid_pic(self):
+        for i, valid_pic in enumerate([vp for vp in os.listdir(self.validation_data_path) if vp.endswith(".png")]):
+            if valid_pic == "martin-wessely-211.png":
+                return self.transforms(Image.open(os.path.join(self.validation_data_path, valid_pic)))
+
+
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
         if data == "train":
             data = torch.cat(self.training_data[:limit_to], dim=0)

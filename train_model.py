@@ -7,9 +7,9 @@ from models.facu import VAE, VAE_KernelsOutside, VAE_NegativeExperts, VAE_Kernel
 from models.elvira import Vanilla
 import wandb
 
-n_kernels, block_size, img_size = 4, 8, 256
+n_kernels, block_size, img_size = 2, 4, 128
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
-train_loader.initialize(n_repeats=5, force_reinitialize=True)
+train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
@@ -18,7 +18,7 @@ hidden_dims = [32, 64, 128, 256, 512]
 nr_epochs = 500
 
 # start disabled run
-run = wandb.init(project="somoe", entity="facu", job_type="train", mode="offline",
+run = wandb.init(project="somoe", entity="facu", job_type="train", mode="disabled",
                  config={
                     "n_kernels": n_kernels,
                     "block_size": block_size,
@@ -67,7 +67,7 @@ for model, model_name, lr in zip(
 
     os.makedirs(f"models/facu/checkpoints/{model_name}", exist_ok=True)
     os.makedirs(f"models/facu/images2/{model_name}", exist_ok=True)
-    valid_pic = next(train_loader.get("valid", 1, 1))[0].squeeze()
+    valid_pic = train_loader.get_valid_pic()
     # save original image
     wandb.log({"original": [wandb.Image(valid_pic.numpy()*255)]}, step=0, commit=True)
     # Image.fromarray(valid_pic.numpy()*255).convert("L").save(f"models/facu/images2/{model_name}/original.jpeg")
