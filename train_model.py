@@ -13,7 +13,7 @@ train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-hidden_dims = [32, 32, 64, 64, 128, 256]
+hidden_dims = [16, 32, 64, 128, 256, 512]
 
 nr_epochs = 250
 
@@ -95,6 +95,7 @@ for model, model_name, lr in zip(
                         loss_present = False
                 if loss_present:
                     total_loss.backward()
+                    mean_epoch_loss += total_loss.item()
                 print(f"Batch {batch}, Loss {loss.item()}")
                 optimizer.step()
 
