@@ -7,9 +7,9 @@ from models.facu import VAE, VAE_KernelsOutside, VAE_NegativeExperts, VAE_Kernel
 from models.elvira import Vanilla
 import wandb
 
-n_kernels, block_size, img_size = 2, 4, 128
+n_kernels, block_size, img_size = 4, 8, 256
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
-train_loader.initialize(n_repeats=5, force_reinitialize=False)
+train_loader.initialize(n_repeats=5, force_reinitialize=True)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
