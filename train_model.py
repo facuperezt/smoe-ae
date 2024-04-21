@@ -13,7 +13,7 @@ train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-hidden_dims = [32, 64, 128, 256, 512]
+hidden_dims = [8, 16]
 
 nr_epochs = 1
 
