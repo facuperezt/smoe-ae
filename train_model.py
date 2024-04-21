@@ -18,7 +18,7 @@ hidden_dims = [32, 64, 128, 256, 512]
 nr_epochs = 500
 
 # start disabled run
-run = wandb.init(project="somoe", entity="facu", job_type="train", mode="disabled",
+run = wandb.init(project="somoe", entity="facu", job_type="train", mode="offline",
                  config={
                     "n_kernels": n_kernels,
                     "block_size": block_size,
