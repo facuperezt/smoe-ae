@@ -9,13 +9,13 @@ import wandb
 
 n_kernels, block_size, img_size = 3, 8, 256
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
-train_loader.initialize(n_repeats=5, force_reinitialize=False)
+train_loader.initialize(n_repeats=5, force_reinitialize=True)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-hidden_dims = [16, 32, 64, 128, 256, 256]
+hidden_dims = [16, 32, 64, 128, 256, 512]
 
-nr_epochs = 250
+nr_epochs = 50
 
 
 for model, model_name, lr in zip(
@@ -23,8 +23,8 @@ for model, model_name, lr in zip(
             # Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device),
             # Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]),
             VAE(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device),
-            VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device),
-            VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device),
+            # VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device),
+            # VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device),
             VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device),
             # SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device),
             # SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2]),
@@ -33,8 +33,8 @@ for model, model_name, lr in zip(
             # "elvira",
             # "elvira_small",
             "vae_kernels_inside",
-            "vae_kernels_outside",
-            "vae_negative_experts",
+            # "vae_kernels_outside",
+            # "vae_negative_experts",
             "vae_kernels_outside_negative_experts",
             # "mlp",
             # "mlp_big",
@@ -42,17 +42,17 @@ for model, model_name, lr in zip(
         [
             # 1e-3,
             # 1e-4,
-            5e-4,
-            5e-4,
-            5e-4,
-            5e-4,
+            3e-4,
+            # 5e-4,
+            # 5e-4,
+            3e-4,
             # 1e-4,
             # 1e-4,
         ]
     ):
     # start disabled run
     run = wandb.init(mode="online",
-                     name=model_name, group="vae",
+                     name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                      config={
                         "n_kernels": n_kernels,
                         "block_size": block_size,
@@ -65,7 +65,7 @@ for model, model_name, lr in zip(
                 )
     print(f"Number of params for model '{model_name}': {sum(p.numel() for p in model.parameters())}")
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.33, patience=20, verbose=False)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.33, patience=5, verbose=False)
 
     os.makedirs(f"models/facu/checkpoints/{model_name}", exist_ok=True)
     os.makedirs(f"models/facu/images2/{model_name}", exist_ok=True)
@@ -83,7 +83,6 @@ for model, model_name, lr in zip(
                 loss_present = False
                 for i, x in enumerate(x_batch):
                     x = x.to(device)
-
                     x_hat, x, mu, log_var = model(x)
                     loss = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)['loss']
                     total_loss += loss
@@ -98,7 +97,8 @@ for model, model_name, lr in zip(
                     mean_epoch_loss += total_loss.item()
                 print(f"Batch {batch}, Loss {loss.item()}")
                 optimizer.step()
-
+            # Update learning rate
+            scheduler.step(mean_epoch_loss)    
             # Save image
             with torch.no_grad():
                 recon = model(valid_pic)[0].detach().cpu().numpy().squeeze()
@@ -115,8 +115,6 @@ for model, model_name, lr in zip(
             # Save model
             torch.save(model.state_dict(), f"models/facu/checkpoints/{model_name}/{epoch}.pth")
 
-            # Update learning rate
-            scheduler.step(loss)
     except KeyboardInterrupt:
         print("Training interrupted")
     finally:
