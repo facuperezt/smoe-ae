@@ -1,2 +1,3 @@
 from .variational_vanilla import VAE, VAE_NegativeExperts, VAE_KernelsOutside, VAE_KernelsOutsideNegativeExperts
+from .variational_residual import VAE_Residual, VAE_Residual_Downsampling
 from .simple_mlp import SimpleMLP
