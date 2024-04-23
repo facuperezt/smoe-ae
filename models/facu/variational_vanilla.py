@@ -2,7 +2,7 @@ from typing import Optional
 import torch
 
 from .variational_abstract import VAE_Abstract
-from models.components.encoders.variational_encoder import VanillaVAE, NegativeExpertsVAE, KernelsOutsideVAE, KernelsOutsideNegativeExpertsVAE, ResidualVAE
+from models.components.encoders.variational_encoder import VanillaVAE, NegativeExpertsVAE, KernelsOutsideVAE, KernelsOutsideNegativeExpertsVAE
 from models.components.decoders.smoe_decoder import VanillaSMoE
 
 __all__ = [

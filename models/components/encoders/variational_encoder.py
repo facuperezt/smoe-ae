@@ -1,5 +1,6 @@
 from typing import List, Tuple
 import torch
+from torch.nn.modules import Module
 
 __all__ = [
     'VanillaVAE',
@@ -32,32 +33,6 @@ class ShiftedSigmoid(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.sigmoid(x) * self.scale + self.shift
-
-class ResidualDownsamplingConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: tuple[int, int] = (3, 3), min_block_size: int = 2):
-        super().__init__()
-        if curr_block_size >= min_block_size/2 and in_channels < out_channels:
-            stride = 2
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=1, bias=False)
-        self.bn = torch.nn.BatchNorm2d(out_channels)
-        self.relu = torch.nn.LeakyReLU()
-        self.downsample = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
-
-class ResidualBatchNormConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1):
-        super().__init__()
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        self.bn = torch.nn.BatchNorm2d(out_channels)
-        self.relu = torch.nn.LeakyReLU()
-        self.downsample = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _x = x
-        x = self.conv(x)
-        x = self.bn(x)
-        x = self.downsample(_x) + x
-        x = self.relu(x)
-        return x
 
 class BatchNormConvBlock(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1):
@@ -93,8 +68,8 @@ class VAE(torch.nn.Module):
             # Same as Elvira's model?
             # hidden_dims = [16, 32, 64, 128, 256, 512, 1024]
             hidden_dims = [16, 32, 64]
-            
-        self.conv = self._build_conv_layers(in_channels, hidden_dims, conv_block, kwargs.get("conv_args", {}))
+
+        self.conv, in_channels = self._build_conv_layers(in_channels, hidden_dims, conv_block, **kwargs.get("conv_args", {}))
 
         # conv_modules = []
         # # Build Encoder
@@ -107,9 +82,13 @@ class VAE(torch.nn.Module):
 
         # self.conv = torch.nn.Sequential(*conv_modules)
 
+        hidden_dims_lin = [h_d for h_d in hidden_dims if h_d >= self.latent_dim]
+        if len(hidden_dims_lin) == 0:
+            hidden_dims_lin = hidden_dims
+
         in_channels *= block_size**2
         lin_modules = []
-        for h_dim in hidden_dims[2:][::-1]:
+        for h_dim in hidden_dims_lin[::-1]:
 
             layer = LinearBlock(in_channels, h_dim)
 
@@ -138,7 +117,7 @@ class VAE(torch.nn.Module):
             layer = conv_block(in_channels, h_dim, **conv_args)
             conv_modules.append(layer)
             in_channels = h_dim
-        return torch.nn.Sequential(*conv_modules)
+        return torch.nn.Sequential(*conv_modules), in_channels
 
     def encode(self, input: torch.Tensor) -> List[torch.Tensor]:
         """
@@ -227,20 +206,3 @@ class KernelsOutsideNegativeExpertsVAE(VAE):
             (ShiftedSigmoid(), torch.nn.Tanh(), torch.nn.Identity())
             )
         
-class ResidualVAE(VAE):
-    def __init__(self,
-                 in_channels: int = 1,
-                 n_kernels: int = 4,
-                 block_size: int = 16,
-                 hidden_dims: List = None,
-                 **kwargs) -> None:
-            super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualBatchNormConvBlock, **kwargs)
-
-class ResidualDownsamplingVAE(VAE):
-    def __init__(self,
-                in_channels: int = 1,
-                n_kernels: int = 4,
-                block_size: int = 16,
-                hidden_dims: List = None,
-                **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualDownsamplingConvBlock, **kwargs)
