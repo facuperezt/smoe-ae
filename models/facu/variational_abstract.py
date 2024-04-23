@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import torch
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 from utils import Img2Block, Block2Img
 
 class VAE_Abstract(torch.nn.Module):
@@ -34,7 +34,7 @@ class VAE_Abstract(torch.nn.Module):
 
     def loss_function(self,
                       *args,
-                      **kwargs) -> dict[str, torch.Tensor]:
+                      **kwargs) -> Dict[str, torch.Tensor]:
         """
         Computes the VAE loss function.
         KL(N(\mu, \sigma), N(0, 1)) = \log \frac{1}{\sigma} + \frac{\sigma^2 + \mu^2}{2} - \frac{1}{2}
