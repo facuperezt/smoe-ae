@@ -35,7 +35,7 @@ class ShiftedSigmoid(torch.nn.Module):
         return torch.sigmoid(x) * self.scale + self.shift
 
 class BatchNormConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1):
         super().__init__()
         self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
         self.bn = torch.nn.BatchNorm2d(out_channels)
@@ -151,7 +151,7 @@ class VAE(torch.nn.Module):
         out = self.output_nonlinearities(out)
         return out
     
-    def forward(self, x: torch.Tensor, **kwargs) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if len(x.shape) == 3:
             x = x[:, None, :, :]
         mu, log_var = self.encode(x)

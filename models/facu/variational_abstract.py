@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import torch
-from typing import Optional
+from typing import Optional, Tuple
 from utils import Img2Block, Block2Img
 
 class VAE_Abstract(torch.nn.Module):
@@ -12,7 +12,7 @@ class VAE_Abstract(torch.nn.Module):
         self._encoder = None
         self._decoder = None
 
-    def forward(self, _x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, _x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         x = _x.clone()
         x = self.img2block(x)
         z, mu, log_var = self.encoder(x)

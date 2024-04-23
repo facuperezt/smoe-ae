@@ -4,7 +4,7 @@ import torch
 from .variational_encoder import CustomLastLayerActivations, LinearBlock
 
 class ResidualDownsamplingConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2):
+    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2):
         super().__init__()
         if curr_block_size//2 >= min_block_size and in_channels < out_channels:
             stride = 2
@@ -22,7 +22,7 @@ class ResidualDownsamplingConvBlock(torch.nn.Module):
         return x
 
 class ResidualBatchNormConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, **kwargs):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, **kwargs):
         super().__init__()
         self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
         self.bn = torch.nn.BatchNorm2d(out_channels)
@@ -136,7 +136,7 @@ class ResidualVAE(torch.nn.Module):
         out = self.output_nonlinearities(out)
         return out
     
-    def forward(self, x: torch.Tensor, **kwargs) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if len(x.shape) == 3:
             x = x[:, None, :, :]
         mu, log_var = self.encode(x)
