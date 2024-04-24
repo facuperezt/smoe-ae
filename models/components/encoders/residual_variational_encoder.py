@@ -49,7 +49,7 @@ class DeepResidualDownsamplingConvBlock(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2):
         super().__init__()
         assert padding == kernel_size[0] // 2 if type(kernel_size) == tuple else kernel_size // 2 == padding
-        if curr_block_size//2 >= min_block_size and in_channels < out_channels:
+        if curr_block_size//2 >= min_block_size and in_channels < out_channels and in_channels != 1:
             stride = 2
         self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
         self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=False)
@@ -153,7 +153,7 @@ class ResidualVAE(torch.nn.Module):
         conv_modules = []
         for h_dim in hidden_dims:
             layer = conv_block(in_channels=in_channels, out_channels=h_dim, curr_block_size=curr_block_size, min_block_size=min_block_size)
-            if in_channels < h_dim and curr_block_size//2 >= min_block_size and type(layer) in [ResidualDownsamplingConvBlock, DeepResidualDownsamplingConvBlock]:
+            if in_channels < h_dim and curr_block_size//2 >= min_block_size and in_channels != 1 and type(layer) in [ResidualDownsamplingConvBlock, DeepResidualDownsamplingConvBlock]:
                 curr_block_size = curr_block_size // 2
             conv_modules.append(layer)
             in_channels = h_dim

@@ -18,7 +18,7 @@ train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-hidden_dims = [16, 16, 16, 64, 64, 128]
+hidden_dims = [16, 16, 64, 64, 256, 256, 256, 256]
 
 nr_epochs = 200
 
@@ -47,9 +47,9 @@ for model, model_name, lr in [
     # [VAE_Residual_DeepConv_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts", 4e-4],
 
     [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
+    [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
     [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_negative_experts_downsampling", 6e-4],
     [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_downsampling", 6e-4],
-    [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
 
     # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device), "mlp", 1e-4],
     # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2]), "mlp_big", 1e-4],
@@ -97,7 +97,7 @@ for model, model_name, lr in [
                     loss = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)['loss']
                     total_loss += loss
                     loss_present = True
-                    if torch.cuda.memory_allocated() > 5e9:
+                    if torch.cuda.memory_allocated() > 7e9:
                         total_loss.backward()  # Has to be computed on every few batches to prevent memory leaks
                         mean_epoch_loss += total_loss.item()
                         total_loss = torch.tensor(0.0, device=device)
