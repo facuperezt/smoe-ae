@@ -69,6 +69,7 @@ for model, model_name, lr in [
                         "initial_lr": lr,
                     }
                 )
+    wandb.watch(model, log="gradients", log_freq=nr_epochs//20)
     print(f"Number of params for model '{model_name}': {sum(p.numel() for p in model.parameters())}")
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=False)
@@ -134,4 +135,7 @@ for model, model_name, lr in [
     finally:
         # Save final model
         torch.save(model.state_dict(), f"models/facu/checkpoints/{model_name}/final.pth")
-        wandb.save(f"models/facu/checkpoints/{model_name}/final.pth")
+        try:
+            wandb.save(f"models/facu/checkpoints/{model_name}/final.pth")
+        except Exception as e:
+            print(f"Failed to save model: {e}")
