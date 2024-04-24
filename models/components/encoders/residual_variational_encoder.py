@@ -153,7 +153,7 @@ class ResidualVAE(torch.nn.Module):
         conv_modules = []
         for h_dim in hidden_dims:
             layer = conv_block(in_channels=in_channels, out_channels=h_dim, curr_block_size=curr_block_size, min_block_size=min_block_size)
-            if in_channels < h_dim and curr_block_size//2 >= min_block_size and type(layer) in [ResidualDownsamplingConvBlock]:
+            if in_channels < h_dim and curr_block_size//2 >= min_block_size and type(layer) in [ResidualDownsamplingConvBlock, DeepResidualDownsamplingConvBlock]:
                 curr_block_size = curr_block_size // 2
             conv_modules.append(layer)
             in_channels = h_dim
