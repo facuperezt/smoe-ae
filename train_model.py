@@ -16,7 +16,7 @@ train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-hidden_dims = [2, 2, 4, 4, 8, 8, 16, 16, 32, 32, 64, 64]
+hidden_dims = [2, 2, 4, 4, 8, 8, 16, 16, 32, 32, 64, 64, 128, 128]
 
 nr_epochs = 500
 
@@ -43,8 +43,9 @@ for model, model_name, lr in [
     # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2]), "mlp_big", 1e-4],
 ]:
     model: VAE_Abstract
+    disable_tqdm = False
     # start disabled run
-    run = wandb.init(mode="online",
+    run = wandb.init(mode="disabled",
                      name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                      config={
                         "n_kernels": n_kernels,
@@ -58,7 +59,7 @@ for model, model_name, lr in [
                 )
     print(f"Number of params for model '{model_name}': {sum(p.numel() for p in model.parameters())}")
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.66, patience=3, verbose=False)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=False)
 
     os.makedirs(f"models/facu/checkpoints/{model_name}", exist_ok=True)
     os.makedirs(f"models/facu/images2/{model_name}", exist_ok=True)
@@ -68,9 +69,12 @@ for model, model_name, lr in [
     # Image.fromarray(valid_pic.numpy()*255).convert("L").save(f"models/facu/images2/{model_name}/original.jpeg")
     valid_pic = valid_pic.to(device)
     try:
-        for epoch in tqdm.tqdm(range(nr_epochs), "Epoch: "):
+        outter_pbar = tqdm.tqdm(range(nr_epochs), desc=f"Epoch Loss: 0.0 - LR: {optimizer.param_groups[0]['lr']:.2e}", disable=disable_tqdm)
+        for epoch in outter_pbar:
             mean_epoch_loss = 0
-            for batch, (x_batch, _) in enumerate(train_loader.get("train", None, -10)):
+            nr_batches = 10
+            pbar = tqdm.tqdm(enumerate(train_loader.get("train", None, -nr_batches)), total=nr_batches, desc=f"Batch 0 - Loss: 0.0", disable=disable_tqdm)
+            for batch, (x_batch, _) in pbar:
                 optimizer.zero_grad()
                 total_loss = torch.tensor(0.0, device=device)
                 loss_present = False
@@ -88,10 +92,13 @@ for model, model_name, lr in [
                 if loss_present:
                     total_loss.backward()
                     mean_epoch_loss += total_loss.item()
-                print(f"Batch {batch}, Loss {loss.item()}")
                 optimizer.step()
+                # Update inner progress bar
+                pbar.set_description(f"Completed Batches {batch+1} - Total Loss: {mean_epoch_loss:.1e} - Loss Per Batch: {mean_epoch_loss/(batch+1):.2f}")
             # Update learning rate
-            scheduler.step(mean_epoch_loss)    
+            scheduler.step(mean_epoch_loss)
+            # Update outter progress bar
+            outter_pbar.set_description(f"Epoch Loss: {mean_epoch_loss:.2e} - LR: {optimizer.param_groups[0]['lr']:.2e}")
             # Save image
             with torch.no_grad():
                 recon = model(valid_pic)[0].detach().cpu().numpy().squeeze()
