@@ -20,7 +20,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 hidden_dims = [16, 16, 16, 64, 64, 128]
 
-nr_epochs = 50
+nr_epochs = 200
 
 for model, model_name, lr in [
     # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device), "elvira", 1e-3],
