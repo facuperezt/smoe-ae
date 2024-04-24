@@ -41,10 +41,10 @@ for model, model_name, lr in [
     # [VAE_Residual_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_vae_kernels_outside_downsampling", 4e-4],
     # [VAE_Residual_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_vae_kernels_outside_negative_experts_downsampling", 4e-4],
 
-    [VAE_Residual_DeepConv(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside", 4e-4],
-    [VAE_Residual_DeepConv_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_negative_experts", 4e-4],
-    [VAE_Residual_DeepConv_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside", 4e-4],
-    [VAE_Residual_DeepConv_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts", 4e-4],
+    # [VAE_Residual_DeepConv(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside", 4e-4],
+    # [VAE_Residual_DeepConv_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_negative_experts", 4e-4],
+    # [VAE_Residual_DeepConv_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside", 4e-4],
+    # [VAE_Residual_DeepConv_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts", 4e-4],
 
     [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
     [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_negative_experts_downsampling", 6e-4],
