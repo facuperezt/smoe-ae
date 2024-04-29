@@ -18,11 +18,12 @@ train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-hidden_dims = [16, 16, 64, 64, 256, 256, 256, 256]
+# hidden_dims = [16, 16, 64, 64, 256, 256, 256, 256]
+hidden_dims = [16, 32, 64]
 
-nr_epochs = 200
+nr_epochs = 100
 
-load_final = True
+load_final = False
 
 for model, model_name, lr in [
     # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device), "elvira", 1e-3],
@@ -53,10 +54,10 @@ for model, model_name, lr in [
     [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_negative_experts_downsampling", 6e-4],
     [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_downsampling", 6e-4],
 
-    [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
-    [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
-    [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_negative_experts_downsampling", 6e-4],
-    [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_downsampling", 6e-4],
+    # [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
+    # [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
+    # [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_negative_experts_downsampling", 6e-4],
+    # [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_downsampling", 6e-4],
 
     # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device), "mlp", 1e-4],
     # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2]), "mlp_big", 1e-4],
@@ -104,14 +105,14 @@ for model, model_name, lr in [
                 loss_present = False
                 for i, x in enumerate(x_batch):
                     x = x.to(device)
-                    x_hat, x, mu, log_var = model(x)
+                    x_hat, x, mu, log_var = model(x, return_all=True)
                     losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)
                     loss = losses["loss"]
                     mean_epoch_reconstr_loss += losses["reconstr_loss"].item()
                     mean_epoch_kl_loss += losses["kl_loss"].item()
                     total_loss += loss
                     loss_present = True
-                    if torch.cuda.memory_allocated() > 7e9:
+                    if torch.cuda.memory_allocated() > 5e9:
                         total_loss.backward()  # Has to be computed on every few batches to prevent memory leaks
                         mean_epoch_loss += total_loss.item()
                         total_loss = torch.tensor(0.0, device=device)
