@@ -108,8 +108,8 @@ for model, model_name, lr in [
                     x_hat, x, mu, log_var, z = model(x, return_all=True)
                     losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)
                     loss = losses["loss"]
-                    mean_epoch_reconstr_loss += losses["reconstr_loss"].item()
-                    mean_epoch_kl_loss += losses["kl_loss"].item()
+                    mean_epoch_reconstr_loss += losses["Reconstruction_Loss"].item()
+                    mean_epoch_kl_loss += losses["KLD"].item()
                     total_loss += loss
                     loss_present = True
                     if torch.cuda.memory_allocated() > 5e9:
