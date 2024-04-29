@@ -1,1 +1,1 @@
-from gdn import GDN
+from .gdn import GDN
