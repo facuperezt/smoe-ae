@@ -4,21 +4,24 @@ from typing import Optional, Tuple, Dict
 from utils import Img2Block, Block2Img
 
 class VAE_Abstract(torch.nn.Module):
-    def __init__(self, block_size: int, img_size: int, device: str = "cuda"):
+    def __init__(self, n_kernels: int, block_size: int, img_size: int, device: str = "cuda"):
         super().__init__()
         self.device = device
+        self.n_kernels = n_kernels
         self.img2block = Img2Block(block_size, img_size)
         self.block2img = Block2Img(block_size, img_size)
         self._encoder = None
         self._decoder = None
 
-    def forward(self, _x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, _x: torch.Tensor, return_all: bool = False) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         x = _x.clone()
         x = self.img2block(x)
         z, mu, log_var = self.encoder(x)
         x = self.decoder(z)
         x = self.block2img(x)
-        return x, _x, mu, log_var
+        if not return_all:
+            return x
+        return x, _x, mu, log_var, z
     
     @property
     def encoder(self):

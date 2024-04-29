@@ -22,6 +22,8 @@ hidden_dims = [16, 16, 64, 64, 256, 256, 256, 256]
 
 nr_epochs = 200
 
+load_final = True
+
 for model, model_name, lr in [
     # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device), "elvira", 1e-3],
     # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]), "elvira_small", 1e-4],
@@ -46,6 +48,11 @@ for model, model_name, lr in [
     # [VAE_Residual_DeepConv_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside", 4e-4],
     # [VAE_Residual_DeepConv_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts", 4e-4],
 
+    [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
+    [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
+    [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_negative_experts_downsampling", 6e-4],
+    [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_downsampling", 6e-4],
+
     [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
     [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
     [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_negative_experts_downsampling", 6e-4],
@@ -55,9 +62,11 @@ for model, model_name, lr in [
     # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2]), "mlp_big", 1e-4],
 ]:
     model: VAE_Abstract
+    if load_final:
+        model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}/final.pth"))
     disable_tqdm = False
     # start disabled run
-    run = wandb.init(mode="online",
+    run = wandb.init(mode="disabled",
                      name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                      config={
                         "n_kernels": n_kernels,
@@ -85,6 +94,8 @@ for model, model_name, lr in [
         outter_pbar = tqdm.tqdm(range(nr_epochs), desc=f"Epoch Loss: 0.0 - LR: {optimizer.param_groups[0]['lr']:.2e}", disable=disable_tqdm)
         for epoch in outter_pbar:
             mean_epoch_loss = 0
+            mean_epoch_reconstr_loss = 0
+            mean_epoch_kl_loss = 0
             nr_batches = 10
             pbar = tqdm.tqdm(enumerate(train_loader.get("train", None, -nr_batches)), total=nr_batches, desc=f"Batch 0 - Loss: 0.0", disable=disable_tqdm)
             for batch, (x_batch, _) in pbar:
@@ -94,7 +105,10 @@ for model, model_name, lr in [
                 for i, x in enumerate(x_batch):
                     x = x.to(device)
                     x_hat, x, mu, log_var = model(x)
-                    loss = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)['loss']
+                    losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)
+                    loss = losses["loss"]
+                    mean_epoch_reconstr_loss += losses["reconstr_loss"].item()
+                    mean_epoch_kl_loss += losses["kl_loss"].item()
                     total_loss += loss
                     loss_present = True
                     if torch.cuda.memory_allocated() > 7e9:
@@ -121,7 +135,11 @@ for model, model_name, lr in [
             # save learning rate
             wandb.log({"learning_rate": optimizer.param_groups[0]['lr']}, commit=False)
             # save mean epoch loss
-            wandb.log({"mean_epoch_loss": mean_epoch_loss}, commit=True)
+            wandb.log({
+                    "mean_epoch_loss": mean_epoch_loss,
+                    "mean_epoch_reconstr_loss": mean_epoch_reconstr_loss,
+                    "mean_epoch_kl_loss": mean_epoch_kl_loss
+                }, commit=True)
 
             # Image.fromarray(recon*255).convert("L").save(f"models/facu/images2/{model_name}/reconstructed_{epoch}.jpeg")
 

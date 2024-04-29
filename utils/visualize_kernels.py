@@ -53,7 +53,7 @@ def _plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, colo
     x += m_x
     y += m_y
 
-    ax.plot(x,y, color=color, linewidth=linewidth, alpha=alpha)
+    ax.plot(x,y, color=color, linewidth=linewidth, alpha=np.clip(alpha, 0, 1))
 
 
 def plot_kernels(smoe_vector: torch.Tensor, ax: plt.Axes, block_size: int, padding: List[int] = None, n_kernels: int = 4, special_kernel_ind: int = None, colors: list = None) -> None:
@@ -79,6 +79,31 @@ def plot_kernels(smoe_vector: torch.Tensor, ax: plt.Axes, block_size: int, paddi
             c = "r"
         _plot_gaussian_contour(np.array([mx, my]), cov, ax, color=c, alpha=nu)
 
+def plot_kernels_chol(smoe_vector: torch.Tensor, ax: plt.Axes, block_size: int, padding: List[int] = None, n_kernels: int = 4, special_kernel_ind: int = None, colors: list = None) -> None:
+    """
+    Plots the kernels of a smoe vector in ax.
+    """
+    if padding is None:
+        padding = [0, 0, 0, 0]
+    smoe_vector = smoe_vector.detach().cpu().numpy()
+    block_size -= 1
+    means_x = (block_size * smoe_vector[:n_kernels]) + padding[0]
+    means_y = (block_size * smoe_vector[n_kernels:2*n_kernels]) + padding[2]
+    nus = smoe_vector[2*n_kernels:3*n_kernels]
+    covs = smoe_vector[3*n_kernels:].reshape(-1, 2, 2)
+    covs = np.tril(covs)
+    covs = np.array([c @ c.T for c in covs])
+    for i, (mx, my, nu, cov) in enumerate(zip(means_x, means_y, nus, covs)):
+        if special_kernel_ind is not None and i == special_kernel_ind:
+            c = "g"
+        elif colors is not None:
+            c = colors[i]
+        else:
+            if nu >= 0:
+                c = "r"
+            else:
+                c = "b"
+        _plot_gaussian_contour(np.array([mx, my]), cov, ax, color=c, alpha=np.abs(nu))
 
 def plot_kernel_centers(smoe_vector: torch.Tensor, ax: plt.Axes, block_size: int, padding: List[int] = None, n_kernels: int = 4, special_kernel_ind: int = None, colors: list = None) -> None:
     """

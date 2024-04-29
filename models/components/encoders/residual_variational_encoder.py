@@ -198,7 +198,8 @@ class ResidualVAE(torch.nn.Module):
         """
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
-        out = eps * std + mu
+        out = mu
+        #out += eps * std
         out = self.output_nonlinearities(out)
         return out
     
