@@ -19,7 +19,7 @@ train_loader.initialize(n_repeats=5, force_reinitialize=False)
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
 # hidden_dims = [16, 16, 64, 64, 256, 256, 256, 256]
-hidden_dims = [16, 32, 64]
+hidden_dims = [16, 32, 64, 128]
 
 nr_epochs = 100
 
@@ -49,10 +49,10 @@ for model, model_name, lr in [
     # [VAE_Residual_DeepConv_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside", 4e-4],
     # [VAE_Residual_DeepConv_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts", 4e-4],
 
-    [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
-    [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
-    [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_negative_experts_downsampling", 6e-4],
-    [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_downsampling", 6e-4],
+    [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_inside_downsampling", 1e-4],
+    [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 1e-4],
+    [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_negative_experts_downsampling", 1e-4],
+    [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_downsampling", 1e-4],
 
     # [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
     # [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
@@ -82,7 +82,7 @@ for model, model_name, lr in [
     wandb.watch(model, log="gradients", log_freq=nr_epochs//20)
     print(f"Number of params for model '{model_name}': {sum(p.numel() for p in model.parameters())}")
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=False)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=3, cooldown=3, verbose=False)
 
     os.makedirs(f"models/facu/checkpoints/{model_name}", exist_ok=True)
     os.makedirs(f"models/facu/images2/{model_name}", exist_ok=True)
