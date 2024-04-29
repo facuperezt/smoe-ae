@@ -106,7 +106,7 @@ for model, model_name, lr in [
                 for i, x in enumerate(x_batch):
                     x = x.to(device)
                     x_hat, x, mu, log_var, z = model(x, return_all=True)
-                    losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var)
+                    losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=0)
                     loss = losses["loss"]
                     mean_epoch_reconstr_loss += losses["Reconstruction_Loss"].item()
                     mean_epoch_kl_loss += losses["KLD"].item()

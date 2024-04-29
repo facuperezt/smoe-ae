@@ -50,11 +50,11 @@ class VAE_Abstract(torch.nn.Module):
         mu = args[2]
         log_var = args[3]
 
-        kld_weight = kwargs.get('kld_weight', 0.00025) # Account for the minibatch samples from the dataset
         recons_loss = torch.nn.functional.mse_loss(recons, input)
+        loss = recons_loss
 
-
-        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
-
-        loss = recons_loss + kld_weight * kld_loss
-        return {'loss': loss, 'Reconstruction_Loss':recons_loss.detach(), 'KLD':-kld_loss.detach()}
+        kld_weight = kwargs.get('kld_weight', 0.00025) # Account for the minibatch samples from the dataset
+        if kld_weight > 0:
+            kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
+            loss += kld_weight * kld_loss
+        return {'loss': loss, 'Reconstruction_Loss' : recons_loss.detach(), 'KLD' : kld_loss.detach()}
