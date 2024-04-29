@@ -57,4 +57,6 @@ class VAE_Abstract(torch.nn.Module):
         if kld_weight > 0:
             kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
             loss += kld_weight * kld_loss
+        else:
+            kld_loss = torch.tensor(0.0)
         return {'loss': loss, 'Reconstruction_Loss' : recons_loss.detach(), 'KLD' : kld_loss.detach()}
