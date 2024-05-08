@@ -3,7 +3,7 @@ import torch
 from PIL import Image
 import tqdm
 from data import DataLoader
-from models.facu import VAE, VAE_KernelsOutside, VAE_NegativeExperts, VAE_KernelsOutsideNegativeExperts, SimpleMLP,\
+from models.facu import VAE_KernelsInside, VAE_KernelsOutside, VAE_NegativeExperts, VAE_KernelsOutsideNegativeExperts, SimpleMLP,\
         VAE_Residual, VAE_Residual_NegativeExperts, VAE_Residual_KernelsOutside, VAE_Residual_KernelsOutsideNegativeExperts,\
         VAE_Residual_Downsampling, VAE_Residual_Downsampling_NegativeExperts, VAE_Residual_Downsampling_KernelsOutside, VAE_Residual_Downsampling_KernelsOutsideNegativeExperts, \
         VAE_Residual_DeepConv, VAE_Residual_DeepConv_NegativeExperts, VAE_Residual_DeepConv_KernelsOutside, VAE_Residual_DeepConv_KernelsOutsideNegativeExperts, \
@@ -19,20 +19,38 @@ train_loader.initialize(n_repeats=5, force_reinitialize=False)
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 
 # hidden_dims = [16, 16, 64, 64, 256, 256, 256, 256]
-hidden_dims = [16, 32, 64, 128]
+hidden_dims = [8, 16, 32, 64]
 
-nr_epochs = 100
+nr_epochs = 500
 
 load_final = False
+
+def plot_grad_flow(named_parameters):
+    import matplotlib.pyplot as plt
+    ave_grads = []
+    layers = []
+    for n, p in named_parameters:
+        if(p.requires_grad) and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean().cpu())
+    plt.plot(ave_grads, alpha=0.3, color="b")
+    plt.hlines(0, 0, len(ave_grads)+1, linewidth=1, color="k" )
+    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
+    plt.xlim(xmin=0, xmax=len(ave_grads))
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow")
+    plt.grid(True)
+    plt.show()
 
 for model, model_name, lr in [
     # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device), "elvira", 1e-3],
     # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]), "elvira_small", 1e-4],
 
-    # [VAE(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "vae_kernels_inside", 4e-4],
-    # [VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "vae_kernels_outside", 4e-4],
-    # [VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "vae_negative_experts", 4e-4],
-    # [VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "vae_kernels_outside_negative_experts", 4e-4],
+    [VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "vae_kernels_inside", 4e-6],
+    [VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "vae_kernels_outside", 4e-6],
+    [VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "vae_negative_experts", 4e-6],
+    [VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "vae_kernels_outside_negative_experts", 4e-6],
 
     # [VAE_Residual(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_vae_kernels_inside", 4e-4],
     # [VAE_Residual_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_vae_negative_experts", 4e-4],
@@ -49,10 +67,10 @@ for model, model_name, lr in [
     # [VAE_Residual_DeepConv_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside", 4e-4],
     # [VAE_Residual_DeepConv_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts", 4e-4],
 
-    [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_inside_downsampling", 1e-4],
-    [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 1e-4],
-    [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_negative_experts_downsampling", 1e-4],
-    [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_downsampling", 1e-4],
+    # [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_inside_downsampling", 1e-4],
+    # [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 1e-4],
+    # [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_negative_experts_downsampling", 1e-4],
+    # [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_downsampling", 1e-4],
 
     # [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_inside_downsampling", 6e-4],
     # [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 6e-4],
@@ -67,7 +85,7 @@ for model, model_name, lr in [
         model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}/final.pth"))
     disable_tqdm = False
     # start disabled run
-    run = wandb.init(mode="disabled",
+    run = wandb.init(mode="online",
                      name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                      config={
                         "n_kernels": n_kernels,
@@ -120,6 +138,7 @@ for model, model_name, lr in [
                 if loss_present:
                     total_loss.backward()
                     mean_epoch_loss += total_loss.item()
+                # plot_grad_flow(model.named_parameters())
                 optimizer.step()
                 # Update inner progress bar
                 pbar.set_description(f"Completed Batches {batch+1} - Total Loss: {mean_epoch_loss:.1e} - Loss Per Batch: {mean_epoch_loss/(batch+1):.2f}")

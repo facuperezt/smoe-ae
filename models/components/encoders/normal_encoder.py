@@ -69,3 +69,5 @@ class ElviraVanillaAE(torch.nn.Module):
         x = self.conv(x)
         x = self.lin(x)
         return x
+    
+    

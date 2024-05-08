@@ -52,6 +52,15 @@ class LinearBlock(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.relu(self.fc(x))
+    
+class ConvBlock(torch.nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.relu = torch.nn.ReLU()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.relu(self.conv(x))
 
 class VAE(torch.nn.Module):
     def __init__(self,
@@ -59,7 +68,7 @@ class VAE(torch.nn.Module):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
-                 conv_block: torch.nn.Module = BatchNormConvBlock,
+                 conv_block: torch.nn.Module = ConvBlock,
                  **kwargs) -> None:
         super().__init__()
 
@@ -70,32 +79,22 @@ class VAE(torch.nn.Module):
             hidden_dims = [16, 32, 64]
 
         self.conv, in_channels = self._build_conv_layers(in_channels, hidden_dims, conv_block, **kwargs.get("conv_args", {}))
+        self.lin, in_channels = self._build_lin_layers(in_channels*block_size**2, hidden_dims, LinearBlock)
 
-        # conv_modules = []
-        # # Build Encoder
-        # for h_dim in hidden_dims:
+        # hidden_dims_lin = [h_d for h_d in hidden_dims if h_d >= self.latent_dim]
+        # if len(hidden_dims_lin) == 0:
+        #     hidden_dims_lin = hidden_dims
 
-        #     layer = conv_block(in_channels, h_dim)
+        # in_channels *= block_size**2
+        # lin_modules = []
+        # for h_dim in hidden_dims_lin[::-1]:
 
-        #     conv_modules.append(layer)
+        #     layer = LinearBlock(in_channels, h_dim)
+
+        #     lin_modules.append(layer)
         #     in_channels = h_dim
 
-        # self.conv = torch.nn.Sequential(*conv_modules)
-
-        hidden_dims_lin = [h_d for h_d in hidden_dims if h_d >= self.latent_dim]
-        if len(hidden_dims_lin) == 0:
-            hidden_dims_lin = hidden_dims
-
-        in_channels *= block_size**2
-        lin_modules = []
-        for h_dim in hidden_dims_lin[::-1]:
-
-            layer = LinearBlock(in_channels, h_dim)
-
-            lin_modules.append(layer)
-            in_channels = h_dim
-
-        self.lin = torch.nn.Sequential(*lin_modules)
+        # self.lin = torch.nn.Sequential(*lin_modules)
 
         self.encoder = torch.nn.Sequential(
             self.conv,
@@ -118,6 +117,17 @@ class VAE(torch.nn.Module):
             conv_modules.append(layer)
             in_channels = h_dim
         return torch.nn.Sequential(*conv_modules), in_channels
+    
+    def _build_lin_layers(self, in_channels: int, hidden_dims: List[int], lin_block: LinearBlock) -> torch.nn.Sequential:
+        hidden_dims_lin = [h_d for h_d in hidden_dims if h_d >= self.latent_dim]
+        if len(hidden_dims_lin) == 0:
+            hidden_dims_lin = hidden_dims
+        lin_modules = []
+        for h_dim in hidden_dims_lin[::-1]:
+            layer = lin_block(in_channels, h_dim)
+            lin_modules.append(layer)
+            in_channels = h_dim
+        return torch.nn.Sequential(*lin_modules), in_channels
 
     def encode(self, input: torch.Tensor) -> List[torch.Tensor]:
         """
@@ -157,15 +167,24 @@ class VAE(torch.nn.Module):
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         return z, mu, log_var
-    
-class VanillaVAE(VAE):
+
+class KernelsInsideVAE(VAE):
     def __init__(self,
                  in_channels: int = 1,
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, BatchNormConvBlock, **kwargs)
+        if batch_norm:
+            conv_block = BatchNormConvBlock
+        else:
+            conv_block = ConvBlock
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
+        self.output_nonlinearities = CustomLastLayerActivations(
+            (2*n_kernels, 1*n_kernels, 4*n_kernels),
+            (torch.nn.Sigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
+            )
 
 class KernelsOutsideVAE(VAE):
     def __init__(self,
@@ -173,8 +192,13 @@ class KernelsOutsideVAE(VAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, BatchNormConvBlock, **kwargs)
+        if batch_norm:
+            conv_block = BatchNormConvBlock
+        else:
+            conv_block = ConvBlock
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
@@ -186,8 +210,13 @@ class NegativeExpertsVAE(VAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, BatchNormConvBlock, **kwargs)
+        if batch_norm:
+            conv_block = BatchNormConvBlock
+        else:
+            conv_block = ConvBlock
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (torch.nn.Sigmoid(), torch.nn.Tanh(), torch.nn.Identity())
@@ -199,8 +228,13 @@ class KernelsOutsideNegativeExpertsVAE(VAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, BatchNormConvBlock, **kwargs)
+        if batch_norm:
+            conv_block = BatchNormConvBlock
+        else:
+            conv_block = ConvBlock
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Tanh(), torch.nn.Identity())

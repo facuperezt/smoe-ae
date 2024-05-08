@@ -1,5 +1,7 @@
 #%%
+import cv2 as cv
 from typing import List
+from matplotlib import cm
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -8,6 +10,7 @@ from PIL import Image
 __all__ = [
     "plot_kernels",
     "plot_kernel_centers",
+    "shade_kernel_areas",
 ]
 
 # Funtion that upsamples image by factor of n
@@ -104,6 +107,100 @@ def plot_kernels_chol(smoe_vector: torch.Tensor, ax: plt.Axes, block_size: int, 
             else:
                 c = "b"
         _plot_gaussian_contour(np.array([mx, my]), cov, ax, color=c, alpha=np.abs(nu))
+
+def interpolate(p_from, p_to, num):
+    direction = (p_to - p_from) / np.linalg.norm(p_to - p_from)
+    distance = np.linalg.norm(p_to - p_from) / (num - 1)
+
+    ret_vec = []
+
+    for i in range(0, num):
+        ret_vec.append(p_from + direction * distance * i)
+
+    return np.array(ret_vec)
+
+def plotImage(ax, img, R, t, size=np.array((1, 1)), img_scale=8, cmap='gray'):
+    """
+        plot image (plane) in 3D with given Pose (R|t) of corner point
+
+        ax      : matplotlib axes to plot on
+        R       : Rotation as roation matrix
+        t       : translation as np.array (1, 3), left down corner of image in real world coord
+        size    : Size as np.array (1, 2), size of image plane in real world
+        img_scale: Scale to bring down image, since this solution needs 1 face for every pixel it will become very slow on big images 
+        cmap    : Color map for image
+    """
+    import cv2 as cv
+    img_size = (np.array((img.shape[0], img.shape[1])) / img_scale).astype('int32')
+    img = cv.resize(img, ((img_size[1], img_size[0])))
+
+    corners = np.array(([0., 0, 0], [0, size[0], 0],
+                        [size[1], 0, 0], [size[1], size[0], 0]))
+
+    corners += t
+    corners = corners @ R
+    xx = np.zeros((img_size[0], img_size[1]))
+    yy = np.zeros((img_size[0], img_size[1]))
+    zz = np.zeros((img_size[0], img_size[1]))
+    l1 = interpolate(corners[0], corners[2], img_size[0])
+    xx[:, 0] = l1[:, 0]
+    yy[:, 0] = l1[:, 1]
+    zz[:, 0] = l1[:, 2]
+    l1 = interpolate(corners[1], corners[3], img_size[0])
+    xx[:, img_size[1] - 1] = l1[:, 0]
+    yy[:, img_size[1] - 1] = l1[:, 1]
+    zz[:, img_size[1] - 1] = l1[:, 2]
+
+    for idx in range(0, img_size[0]):
+        p_from = np.array((xx[idx, 0], yy[idx, 0], zz[idx, 0]))
+        p_to = np.array((xx[idx, img_size[1] - 1], yy[idx, img_size[1] - 1], zz[idx, img_size[1] - 1]))
+        l1 = interpolate(p_from, p_to, img_size[1])
+        xx[idx, :] = l1[:, 0]
+        yy[idx, :] = l1[:, 1]
+        zz[idx, :] = l1[:, 2]
+
+    if img.max() > 1:
+        img = img / 255
+
+
+    ax.plot_surface(xx, yy, zz, rstride=1, cstride=1, facecolors=np.stack(3*[img]).transpose(1, 2, 0), shade=False, cmap=cm.get_cmap(cmap), alpha=0.8, zorder=0)
+    return None
+
+def shade_kernel_areas(smoe_vector: torch.Tensor, ax: plt.Axes, block_size: int, image, padding: List[int] = None, n_kernels: int = 4, special_kernel_ind: int = None, colors: list = None) -> None:
+    if padding is None:
+        padding = [0, 0, 0, 0]
+    smoe_vector = smoe_vector.detach().cpu().numpy()
+    block_size -= 1
+    means_x = (block_size * smoe_vector[:n_kernels]) + padding[0]
+    means_y = (block_size * smoe_vector[n_kernels:2*n_kernels]) + padding[2]
+    nus = smoe_vector[2*n_kernels:3*n_kernels]
+    covs = smoe_vector[3*n_kernels:].reshape(-1, 2, 2)
+    covs = np.tril(covs)
+    covs = np.array([c @ c.T for c in covs])
+    
+    from scipy.stats import multivariate_normal
+    _vars = [multivariate_normal(mean=mean, cov=cov) for mean, cov in zip(zip(means_x, means_y), covs)]
+    x = np.linspace(0, block_size, 100)
+    y = np.linspace(0, block_size, 100)
+    X, Y = np.meshgrid(x, y)
+
+    pos = np.empty(X.shape + (2,))
+    pos[:, :, 0] = X
+    pos[:, :, 1] = Y
+    Z = [v.pdf(pos) for v in _vars]
+    print(means_x, means_y, nus)
+    # make plot interactive
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    # ax.view_init(elev=75, azim=75, roll=180)
+    R_rad = np.array((0.0, 0.0, 0.0)) * np.pi / 180
+    R = cv.Rodrigues(R_rad)[0]
+    plotImage(ax, image.cpu().flip(0).numpy(), R, np.array([0., 0., 0.05]), size=np.array([block_size, block_size]), img_scale=1, cmap='gray')
+    for z in Z:
+        ax.plot_surface(X, Y, z, cmap='viridis', edgecolor='none', alpha=0.8, zorder=100)
+
+    plt.figure()
+    plt.imshow(image.cpu(), cmap='gray')
 
 def plot_kernel_centers(smoe_vector: torch.Tensor, ax: plt.Axes, block_size: int, padding: List[int] = None, n_kernels: int = 4, special_kernel_ind: int = None, colors: list = None) -> None:
     """
