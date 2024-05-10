@@ -6,7 +6,7 @@ import os
 from PIL import Image
 import tqdm
 
-from .kernel_space_generator import get_m_samples_with_n_kernels
+from .kernel_space_generator import get_m_samples
 import threading
 import queue
 
@@ -44,18 +44,21 @@ class DataLoader:
         return self.transforms(Image.open(os.path.join(self.validation_data_path, os.pardir, "sample_comparisson_photo.png")).convert("RGB"))
 
     @staticmethod
-    def generate_samples(q: queue.Queue, n_batches, n_blocks, n_kernels, block_size, include_zero=False, negative_experts=False):
+    def generate_samples(q: queue.Queue, n_batches, n_blocks, n_kernels, kernels_outside: bool = False, negative_experts: bool = False,
+                         vmin: float = -5., vmax: float = 5, include_zero=False):
         for _ in range(n_batches):
-            print("Generating samples")
-            samples = get_m_samples_with_n_kernels(n_blocks, n_kernels, block_size, include_zero=include_zero, negative_experts=negative_experts)
-            print("Generated samples")
+            samples = get_m_samples(n_blocks, n_kernels, kernels_outside=kernels_outside, negative_experts=negative_experts, vmin=vmin, vmax=vmax, include_zero=include_zero, device="cpu")
             q.put(samples)
 
-    def generate_random_blocks(self, n_batches: int, n_blocks: int, n_kernels: int, block_size: int, include_zero: bool = False, negative_experts: bool = False):
+    def generate_random_blocks_queue(self, n_batches: int, n_blocks: int, n_kernels: int, block_size: int, include_zero: bool = False, negative_experts: bool = False):
         q = queue.Queue()
         thread = threading.Thread(target=self.generate_samples, args=(q, n_batches, n_blocks, n_kernels, block_size, include_zero, negative_experts), daemon=True)
         thread.start()
         return q
+    
+    def get_m_blocks_with_n_kernels(self, m: int, n: int, kernels_outside: bool = False, negative_experts: bool = False,
+                                    vmin: float = -5, vmax: float = 5, include_zero: bool = True, device: torch.device = torch.device("cpu")):
+        return get_m_samples(m, n, kernels_outside=kernels_outside, negative_experts=negative_experts, vmin=vmin, vmax=vmax, include_zero=include_zero, device=device)
 
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
         if data == "train":
