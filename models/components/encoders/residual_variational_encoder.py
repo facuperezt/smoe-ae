@@ -134,16 +134,6 @@ class DeepResidualConvBlock(torch.nn.Module):
 ############################
 
 class ResidualVAE(VAE):
-    def __init__(self,
-                 in_channels: int = 1,
-                 n_kernels: int = 4,
-                 block_size: int = 16,
-                 hidden_dims: List = None,
-                 batch_norm: bool = False,
-                 **kwargs) -> None:
-        conv_block = partial(ResidualConvBlock, batch_norm=batch_norm)
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
-        
     def _build_conv_layers(self, in_channels: int, hidden_dims: List[int], conv_block: ResidualConvBlock, curr_block_size: int, min_block_size: int = 2) -> torch.nn.Sequential:
         conv_modules = []
         for h_dim in hidden_dims:
@@ -164,6 +154,17 @@ class ResidualVAE(VAE):
             lin_modules.append(layer)
             in_channels = h_dim
         return torch.nn.Sequential(*lin_modules), in_channels
+    
+    def __init__(self,
+                 in_channels: int = 1,
+                 n_kernels: int = 4,
+                 block_size: int = 16,
+                 hidden_dims: List = None,
+                 batch_norm: bool = False,
+                 **kwargs) -> None:
+        conv_block = partial(ResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
+        
 
     def encode(self, input: torch.Tensor) -> List[torch.Tensor]:
         """

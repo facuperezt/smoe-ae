@@ -114,7 +114,7 @@ def plot_grad_flow(named_parameters):
     plt.grid(True)
     plt.show()
 
-def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, _kld_loss):
+def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, _kld_loss, mode="disabled"):
     for model, model_name, lr in [
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device), "elvira", 1e-3],
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]), "elvira_small", 1e-4],
@@ -157,7 +157,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
             model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}/final.pth"))
         disable_tqdm = False
         # start disabled run
-        run = wandb.init(mode="online",
+        run = wandb.init(mode=mode,
                         name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                         config={
                             "n_kernels": n_kernels,
@@ -274,4 +274,5 @@ if __name__ == "__main__":
 
     for bn in batch_norm:
         for kld in _kld_loss:
-            train_models(n_kernels, block_size, img_size, hidden_dims, bn, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, kld)
+            train_models(n_kernels, block_size, img_size, hidden_dims, bn, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, kld,
+                         mode="disabled")
