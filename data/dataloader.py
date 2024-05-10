@@ -6,6 +6,10 @@ import os
 from PIL import Image
 import tqdm
 
+from .kernel_space_generator import get_m_samples_with_n_kernels
+import threading
+import queue
+
 
 def initialize_transforms(img_size: int = 512):
     transforms = v2.Compose([
@@ -39,6 +43,19 @@ class DataLoader:
     def get_valid_pic(self):
         return self.transforms(Image.open(os.path.join(self.validation_data_path, os.pardir, "sample_comparisson_photo.png")).convert("RGB"))
 
+    @staticmethod
+    def generate_samples(q: queue.Queue, n_batches, n_blocks, n_kernels, block_size, include_zero=False, negative_experts=False):
+        for _ in range(n_batches):
+            print("Generating samples")
+            samples = get_m_samples_with_n_kernels(n_blocks, n_kernels, block_size, include_zero=include_zero, negative_experts=negative_experts)
+            print("Generated samples")
+            q.put(samples)
+
+    def generate_random_blocks(self, n_batches: int, n_blocks: int, n_kernels: int, block_size: int, include_zero: bool = False, negative_experts: bool = False):
+        q = queue.Queue()
+        thread = threading.Thread(target=self.generate_samples, args=(q, n_batches, n_blocks, n_kernels, block_size, include_zero, negative_experts), daemon=True)
+        thread.start()
+        return q
 
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
         if data == "train":

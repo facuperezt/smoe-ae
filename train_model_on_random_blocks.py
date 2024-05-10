@@ -1,4 +1,5 @@
 import os
+import time
 import torch
 from PIL import Image
 import tqdm
@@ -16,7 +17,6 @@ import wandb
 if __name__ == "__main__":
     n_kernels, block_size, img_size = 3, 8, 256
     train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
-    train_loader.initialize(n_repeats=5, force_reinitialize=False)
 
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
@@ -24,7 +24,8 @@ if __name__ == "__main__":
     hidden_dims = [8, 16, 32, 64]
 
     nr_epochs = 500
-
+    nr_batches = 10
+    batch_size = 10_000
     load_final = False
 
     def plot_grad_flow(named_parameters):
@@ -87,7 +88,7 @@ if __name__ == "__main__":
             model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}/final.pth"))
         disable_tqdm = False
         # start disabled run
-        run = wandb.init(mode="online",
+        run = wandb.init(mode="disabled",
                         name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                         config={
                             "n_kernels": n_kernels,
@@ -117,33 +118,40 @@ if __name__ == "__main__":
                 mean_epoch_loss = 0
                 mean_epoch_reconstr_loss = 0
                 mean_epoch_kl_loss = 0
-                nr_batches = 10
-                pbar = tqdm.tqdm(enumerate(train_loader.get("train", None, -nr_batches)), total=nr_batches, desc=f"Batch 0 - Loss: 0.0", disable=disable_tqdm)
-                for batch, (x_batch, _) in pbar:
-                    optimizer.zero_grad()
-                    total_loss = torch.tensor(0.0, device=device)
-                    loss_present = False
-                    for i, x in enumerate(x_batch):
-                        x = x.to(device)
-                        x_hat, x, mu, log_var, z = model(x, return_all=True)
+                data_queue = train_loader.generate_random_blocks(nr_batches, batch_size, n_kernels, block_size, include_zero=True, 
+                                                        negative_experts="negativeexperts" in str(model.__class__).lower())
+                with tqdm.tqdm(total=nr_batches, desc=f"Batch 0 - Loss: 0.0", disable=disable_tqdm) as pbar:
+                    batch = 0
+                    while batch < nr_batches:
+                        print("waiting on data queue")
+                        x_batch = data_queue.get(True)
+                        print("got data")
+                        optimizer.zero_grad()
+                        total_loss = torch.tensor(0.0, device=device)
+                        loss_present = False
+                        x = model.decoder(x_batch.to(device)).float()
+                        x_hat, x, mu, log_var, z = model(x, return_all=True, input_is_img=False)
+                        time.sleep(5)
                         losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=0)
                         loss = losses["loss"]
                         mean_epoch_reconstr_loss += losses["Reconstruction_Loss"].item()
                         mean_epoch_kl_loss += losses["KLD"].item()
                         total_loss += loss
                         loss_present = True
-                        if torch.cuda.memory_allocated() > 5e9:
+                        if torch.cuda.memory_allocated() > 7e9:
                             total_loss.backward()  # Has to be computed on every few batches to prevent memory leaks
                             mean_epoch_loss += total_loss.item()
                             total_loss = torch.tensor(0.0, device=device)
                             loss_present = False
-                    if loss_present:
-                        total_loss.backward()
-                        mean_epoch_loss += total_loss.item()
-                    # plot_grad_flow(model.named_parameters())
-                    optimizer.step()
-                    # Update inner progress bar
-                    pbar.set_description(f"Completed Batches {batch+1} - Total Loss: {mean_epoch_loss:.1e} - Loss Per Batch: {mean_epoch_loss/(batch+1):.2f}")
+                        if loss_present:
+                            total_loss.backward()
+                            mean_epoch_loss += total_loss.item()
+                        # plot_grad_flow(model.named_parameters())
+                        optimizer.step()
+                        # Update inner progress bar
+                        pbar.set_description(f"Completed Batches {batch+1} - Total Loss: {mean_epoch_loss:.1e} - Loss Per Batch: {mean_epoch_loss/(batch+1):.2f}")
+                        pbar.update(1)
+                        batch += 1
                 # Update learning rate
                 scheduler.step(mean_epoch_loss)
                 # Update outter progress bar

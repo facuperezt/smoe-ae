@@ -13,12 +13,14 @@ class VAE_Abstract(torch.nn.Module):
         self._encoder = None
         self._decoder = None
 
-    def forward(self, _x: torch.Tensor, return_all: bool = False) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, _x: torch.Tensor, return_all: bool = False, input_is_img: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         x = _x.clone()
-        x = self.img2block(x)
+        if input_is_img:
+            x = self.img2block(x)
         z, mu, log_var = self.encoder(x)
         x = self.decoder(z)
-        x = self.block2img(x)
+        if input_is_img:
+            x = self.block2img(x)
         if not return_all:
             return x
         return x, _x, mu, log_var, z

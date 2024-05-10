@@ -201,7 +201,7 @@ def initialize_kernel_plotter(n_kernels, block_size):
         mu = torch.tensor([pos0[0], pos1[0], pos2[0], pos0[1], pos1[1], pos2[1], nu0, nu1, nu2, *chol0, *chol1, *chol2])
         
         mu_img = decoder(mu.view(1, -1))
-        plt.imshow(mu_img.detach().cpu().numpy().squeeze().T, cmap='gray', vmin=0, vmax=1)
+        plt.imshow(mu_img.detach().transpose(0,1).cpu().numpy().squeeze(), cmap='gray', vmin=0, vmax=1)
         if current_kernel is not None:
             current_kernel = int(current_kernel.split(" ")[1])
             center = [pos0, pos1, pos2][current_kernel]

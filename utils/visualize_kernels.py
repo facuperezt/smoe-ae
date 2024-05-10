@@ -48,7 +48,7 @@ def _plot_gaussian_contour(mean: np.ndarray, cov: np.ndarray, ax: plt.Axes, colo
         phi = np.pi/2
     else:
         phi = np.arctan2(l1 - a, b)
-
+    phi += np.pi/2
     t = np.linspace(0, 2*np.pi, res)
     x = np.sqrt(l1) * np.cos(phi) * np.cos(t) - np.sqrt(l2) * np.sin(phi) * np.sin(t)
     y = np.sqrt(l1) * np.sin(phi) * np.cos(t) + np.sqrt(l2) * np.cos(phi) * np.sin(t)
@@ -253,7 +253,10 @@ def rectify_covariance_matrix(cov):
 
     return cov_rectified
 
-
+def plot_block_with_kernels(smoe_vector, block_img: torch.Tensor, n_kernels: int = 4, block_size: int = 8):
+    plt.imshow(block_img.transpose(0,1).detach().cpu(), cmap='gray', vmin=0, vmax=1)
+    plot_kernel_centers(smoe_vector, plt.gca(), block_size=block_size, n_kernels=n_kernels)
+    plot_kernels_chol(smoe_vector, plt.gca(), block_size=block_size, n_kernels=n_kernels)
 
 if __name__ == "__main__":
     # fig, ax = plt.subplots()
