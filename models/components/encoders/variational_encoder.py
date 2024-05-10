@@ -2,6 +2,8 @@ from typing import List, Tuple
 import torch
 from torch.nn.modules import Module
 
+from models.components.conv_blocks.conv_blocks import BatchNormConvBlock, ConvBlock, CustomLastLayerActivations, DeepResidualDownsamplingConvBlock, LinearBlock, ResidualDownsamplingConvBlock, ShiftedSigmoid
+
 __all__ = [
     'VanillaVAE',
     'KernelsOutsideVAE',
@@ -10,57 +12,6 @@ __all__ = [
     'ResidualVAE',
     'ResidualDownsamplingVAE',
 ]
-
-class CustomLastLayerActivations(torch.nn.Module):
-    def __init__(self, group_sizes: Tuple[int], activations: Tuple):
-        super().__init__()
-        self.group_sizes = group_sizes
-        self.group_activation = activations
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        out = []
-        _base = 0
-        for group_size, act in zip(self.group_sizes, self.group_activation):
-            out.append(act(x[:, _base:_base + group_size]))
-            _base += group_size
-        return torch.cat(out, dim=1)
-    
-class ShiftedSigmoid(torch.nn.Module):
-    def __init__(self, shift: float = -1, scale: float = 3):
-        super().__init__()
-        self.shift = shift
-        self.scale = scale
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return torch.sigmoid(x) * self.scale + self.shift
-
-class BatchNormConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1):
-        super().__init__()
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        self.bn = torch.nn.BatchNorm2d(out_channels)
-        self.relu = torch.nn.LeakyReLU()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.relu(self.bn(self.conv(x)))
-
-class LinearBlock(torch.nn.Module):
-    def __init__(self, in_features: int, out_features: int):
-        super().__init__()
-        self.fc = torch.nn.Linear(in_features, out_features)
-        self.relu = torch.nn.ReLU()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.relu(self.fc(x))
-    
-class ConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1):
-        super().__init__()
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding)
-        self.relu = torch.nn.ReLU()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.relu(self.conv(x))
 
 class VAE(torch.nn.Module):
     def __init__(self,
@@ -78,7 +29,12 @@ class VAE(torch.nn.Module):
             # hidden_dims = [16, 32, 64, 128, 256, 512, 1024]
             hidden_dims = [16, 32, 64]
 
-        self.conv, in_channels = self._build_conv_layers(in_channels, hidden_dims, conv_block, **kwargs.get("conv_args", {}))
+        ret = self._build_conv_layers(in_channels, hidden_dims, conv_block, **kwargs.get("conv_args", {}))
+        if len(ret) == 2:
+            self.conv, in_channels = ret
+        else:
+            self.conv, in_channels, block_size = ret
+        self._block_size = block_size
         self.lin, in_channels = self._build_lin_layers(in_channels*block_size**2, hidden_dims, LinearBlock)
 
         self.encoder = torch.nn.Sequential(

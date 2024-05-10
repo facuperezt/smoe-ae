@@ -2,7 +2,8 @@ from functools import partial
 from typing import List, Tuple
 import torch
 
-from .variational_encoder import CustomLastLayerActivations, LinearBlock, ShiftedSigmoid, VAE
+from models.components.conv_blocks.conv_blocks import CustomLastLayerActivations, DeepResidualConvBlock, DeepResidualDownsamplingConvBlock, LinearBlock, ResidualConvBlock, ResidualDownsamplingConvBlock, ShiftedSigmoid
+from models.components.encoders.variational_encoder import VAE
 
 __all__ = [
     'ResidualVAE',
@@ -24,108 +25,6 @@ __all__ = [
 ]
 
 ############################################################################################
-#################################### CONV BLOCKS ############################################
-############################################################################################
-
-class ResidualDownsamplingConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2, batch_norm: bool = True):
-        super().__init__()
-        assert padding == kernel_size[0] // 2 if type(kernel_size) == tuple else kernel_size // 2 == padding
-        if curr_block_size//2 >= min_block_size and in_channels < out_channels:
-            stride = 2
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=not batch_norm)
-        if batch_norm:
-            self.bn = torch.nn.BatchNorm2d(out_channels)
-            self.relu = torch.nn.LeakyReLU()
-        else:
-            self.bn = torch.nn.Identity()
-            self.relu = torch.nn.ReLU()
-        self.downsample = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=not batch_norm)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _x = x
-        x = self.conv(x)
-        x = self.bn(x)
-        x = self.downsample(_x) + x
-        x = self.relu(x)
-        return x
-
-class DeepResidualDownsamplingConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2, batch_norm: bool = True):
-        super().__init__()
-        assert padding == kernel_size[0] // 2 if type(kernel_size) == tuple else kernel_size // 2 == padding
-        if curr_block_size//2 >= min_block_size and in_channels < out_channels and in_channels != 1:
-            stride = 2
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=not batch_norm)
-        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=not batch_norm)
-        self.conv3 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=not batch_norm)
-        if batch_norm:
-            self.bn = torch.nn.BatchNorm2d(out_channels)
-            self.relu = torch.nn.LeakyReLU()
-        else:
-            self.bn = torch.nn.Identity()
-            self.relu = torch.nn.ReLU()
-        self.downsample = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=not batch_norm)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _x = x
-        x = self.conv(x)
-        x = self.bn(x)
-        x = self.relu(x)
-        x = self.conv2(x)
-        x = self.bn(x)
-        x = self.relu(x)
-        x = self.conv3(x)
-        x = self.bn(x)
-        x = self.downsample(_x) + x
-        x = self.relu(x)
-        return x
-
-class ResidualConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, batch_norm: bool = True, **kwargs):
-        super().__init__()
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=not batch_norm)
-        if batch_norm:
-            self.bn = torch.nn.BatchNorm2d(out_channels)
-            self.relu = torch.nn.LeakyReLU()
-        else:
-            self.bn = torch.nn.Identity()
-            self.relu = torch.nn.ReLU()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _x = x
-        x = self.conv(x)
-        x = self.bn(x)
-        x = self.relu(x)
-        return x
-    
-class DeepResidualConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, batch_norm: bool = True, **kwargs):
-        super().__init__()
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=not batch_norm)
-        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=not batch_norm)
-        self.conv3 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=not batch_norm)
-        if batch_norm:
-            self.bn = torch.nn.BatchNorm2d(out_channels)
-            self.relu = torch.nn.LeakyReLU()
-        else:
-            self.bn = torch.nn.Identity()
-            self.relu = torch.nn.ReLU()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _x = x
-        x = self.conv(x)
-        x = self.bn(x)
-        x = self.relu(x)
-        x = self.conv2(x)
-        x = self.bn(x)
-        x = self.relu(x)
-        x = self.conv3(x)
-        x = self.bn(x)
-        x = self.relu(x)
-        return x
-
-############################################################################################
 #################################### ENCODERS ##############################################
 ############################################################################################
 
@@ -134,6 +33,16 @@ class DeepResidualConvBlock(torch.nn.Module):
 ############################
 
 class ResidualVAE(VAE):
+    def __init__(self,
+                 in_channels: int = 1,
+                 n_kernels: int = 4,
+                 block_size: int = 16,
+                 hidden_dims: List = None,
+                 batch_norm: bool = False,
+                 **kwargs) -> None:
+        conv_block = partial(ResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **{**kwargs, "conv_args": {"min_block_size": 2, "curr_block_size": block_size}})
+        
     def _build_conv_layers(self, in_channels: int, hidden_dims: List[int], conv_block: ResidualConvBlock, curr_block_size: int, min_block_size: int = 2) -> torch.nn.Sequential:
         conv_modules = []
         for h_dim in hidden_dims:
@@ -154,57 +63,6 @@ class ResidualVAE(VAE):
             lin_modules.append(layer)
             in_channels = h_dim
         return torch.nn.Sequential(*lin_modules), in_channels
-    
-    def __init__(self,
-                 in_channels: int = 1,
-                 n_kernels: int = 4,
-                 block_size: int = 16,
-                 hidden_dims: List = None,
-                 batch_norm: bool = False,
-                 **kwargs) -> None:
-        conv_block = partial(ResidualConvBlock, batch_norm=batch_norm)
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
-        
-
-    def encode(self, input: torch.Tensor) -> List[torch.Tensor]:
-        """
-        Encodes the input by passing through the encoder network
-        and returns the latent codes.
-        :param input: (Tensor) Input tensor to encoder [N x C x H x W]
-        :return: (Tensor) List of latent codes
-        """
-        # result = self.encoder(input)
-        result = input
-        for layer in self.encoder:
-            result = layer(result)
-        # Split the result into mu and var components
-        # of the latent Gaussian distribution
-        mu = self.fc_mu(result)
-        log_var = self.fc_var(result)
-
-        return [mu, log_var]
-    
-    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """
-        Reparameterization trick to sample from N(mu, var) from
-        N(0,1).
-        :param mu: (Tensor) Mean of the latent Gaussian [B x D]
-        :param logvar: (Tensor) Standard deviation of the latent Gaussian [B x D]
-        :return: (Tensor) [B x D]
-        """
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        out = mu
-        out += eps * std
-        out = self.output_nonlinearities(out)
-        return out
-    
-    def forward(self, x: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        if len(x.shape) == 3:
-            x = x[:, None, :, :]
-        mu, log_var = self.encode(x)
-        z = self.reparameterize(mu, log_var)
-        return z, mu, log_var
     
 class ResidualKernelsOutsideVAE(ResidualVAE):
     def __init__(self,

@@ -154,8 +154,9 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
     ]:
         model: VAE_Abstract
         if load_final:
-            model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}/final.pth"))
+            model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth"))
         disable_tqdm = False
+        nr_model_params = sum(p.numel() for p in model.parameters())
         # start disabled run
         run = wandb.init(mode=mode,
                         name=f"{model_name}", group="vae", project=f"{hidden_dims}",
@@ -171,16 +172,16 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                         }
                     )
         wandb.watch(model, log="gradients", log_freq=nr_epochs//20)
-        print(f"Number of params for model '{model_name}': {sum(p.numel() for p in model.parameters())}")
-        optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+        print(f"Number of params for model '{model_name}': {nr_model_params}")
+        optimizer = torch.optim.SGD(model.parameters(), lr=lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=nr_epochs//20, cooldown=nr_epochs//40, verbose=False)
         early_stopping = EarlyStopping(patience=nr_epochs//10, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
 
-        os.makedirs(f"models/facu/checkpoints/{model_name}", exist_ok=True)
-        os.makedirs(f"models/facu/images2/{model_name}", exist_ok=True)
+        os.makedirs(f"models/facu/checkpoints/{model_name}_random_blocks/", exist_ok=True)
+        os.makedirs(f"models/facu/images2/{model_name}_random_blocks/", exist_ok=True)
         valid_pic = train_loader.get_valid_pic()
         # save original image
-        wandb.log({"original": [wandb.Image(valid_pic.numpy()*255)]}, step=0, commit=True)
+        wandb.log({"original": [wandb.Image(valid_pic.numpy()*255)], "nr_params": nr_model_params}, step=0, commit=True)
         # Image.fromarray(valid_pic.numpy()*255).convert("L").save(f"models/facu/images2/{model_name}/original.jpeg")
         valid_pic = valid_pic.to(device)
         try:
@@ -194,7 +195,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                 with tqdm.tqdm(total=nr_batches, desc=f"Batch 0 - Loss: 0.0", disable=disable_tqdm) as pbar:
                     batch = 0
                     while batch < nr_batches:
-                        x_batch = train_loader.get_m_blocks_with_n_kernels(batch_size, n_kernels, kernels_outside="kernelsoutside" in str(model.__class__).lower(), 
+                        x_batch = train_loader.get_m_blocks_with_n_kernels(min(batch_size, 500_000//model._encoder._block_size**2), n_kernels, kernels_outside="kernelsoutside" in str(model.__class__).lower(), 
                                             negative_experts="negativeexperts" in str(model.__class__).lower(), device=device)
                         optimizer.zero_grad()
                         total_loss = torch.tensor(0.0, device=device)
@@ -208,7 +209,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                             kld_loss = _kld_loss * (epoch - nr_epochs*0.15) / (nr_epochs*0.3 - nr_epochs*0.15)
                         else:
                             kld_loss = _kld_loss
-                        losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=1e-4 if epoch > 20 else 0.0)
+                        losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss)
                         loss = losses["loss"]
                         mean_epoch_reconstr_loss += losses["Reconstruction_Loss"].item()
                         mean_epoch_kl_loss += losses["KLD"].item()
@@ -262,11 +263,11 @@ if __name__ == "__main__":
 
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-    hidden_dims = [8, 8, 8, 32, 32, 32, 128, 128, 128]
+    hidden_dims = [8, 8, 16, 16, 32, 64]
 
-    nr_epochs = 50
-    nr_batches = 10
-    batch_size = 10_000
+    nr_epochs = 100
+    nr_batches = 100
+    batch_size = 1_000
     load_final = False
     input_is_img = False
     batch_norm = [True, False]
@@ -275,4 +276,4 @@ if __name__ == "__main__":
     for bn in batch_norm:
         for kld in _kld_loss:
             train_models(n_kernels, block_size, img_size, hidden_dims, bn, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, kld,
-                         mode="disabled")
+                         mode="online")
