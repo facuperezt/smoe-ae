@@ -1,7 +1,8 @@
+from functools import partial
 from typing import List, Tuple
 import torch
 
-from .variational_encoder import CustomLastLayerActivations, LinearBlock, ShiftedSigmoid
+from .variational_encoder import CustomLastLayerActivations, LinearBlock, ShiftedSigmoid, VAE
 
 __all__ = [
     'ResidualVAE',
@@ -27,15 +28,19 @@ __all__ = [
 ############################################################################################
 
 class ResidualDownsamplingConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2):
+    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2, batch_norm: bool = True):
         super().__init__()
         assert padding == kernel_size[0] // 2 if type(kernel_size) == tuple else kernel_size // 2 == padding
         if curr_block_size//2 >= min_block_size and in_channels < out_channels:
             stride = 2
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        self.bn = torch.nn.BatchNorm2d(out_channels)
-        self.relu = torch.nn.LeakyReLU()
-        self.downsample = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
+        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=not batch_norm)
+        if batch_norm:
+            self.bn = torch.nn.BatchNorm2d(out_channels)
+            self.relu = torch.nn.LeakyReLU()
+        else:
+            self.bn = torch.nn.Identity()
+            self.relu = torch.nn.ReLU()
+        self.downsample = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=not batch_norm)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         _x = x
@@ -46,17 +51,21 @@ class ResidualDownsamplingConvBlock(torch.nn.Module):
         return x
 
 class DeepResidualDownsamplingConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2):
+    def __init__(self, in_channels: int, out_channels: int, curr_block_size: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, min_block_size: int = 2, batch_norm: bool = True):
         super().__init__()
         assert padding == kernel_size[0] // 2 if type(kernel_size) == tuple else kernel_size // 2 == padding
         if curr_block_size//2 >= min_block_size and in_channels < out_channels and in_channels != 1:
             stride = 2
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=False)
-        self.conv3 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=False)
-        self.bn = torch.nn.BatchNorm2d(out_channels)
-        self.relu = torch.nn.LeakyReLU()
-        self.downsample = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
+        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=not batch_norm)
+        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=not batch_norm)
+        self.conv3 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=not batch_norm)
+        if batch_norm:
+            self.bn = torch.nn.BatchNorm2d(out_channels)
+            self.relu = torch.nn.LeakyReLU()
+        else:
+            self.bn = torch.nn.Identity()
+            self.relu = torch.nn.ReLU()
+        self.downsample = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=not batch_norm)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         _x = x
@@ -72,12 +81,16 @@ class DeepResidualDownsamplingConvBlock(torch.nn.Module):
         x = self.relu(x)
         return x
 
-class ResidualBatchNormConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, **kwargs):
+class ResidualConvBlock(torch.nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, batch_norm: bool = True, **kwargs):
         super().__init__()
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        self.bn = torch.nn.BatchNorm2d(out_channels)
-        self.relu = torch.nn.LeakyReLU()
+        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=not batch_norm)
+        if batch_norm:
+            self.bn = torch.nn.BatchNorm2d(out_channels)
+            self.relu = torch.nn.LeakyReLU()
+        else:
+            self.bn = torch.nn.Identity()
+            self.relu = torch.nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         _x = x
@@ -86,14 +99,18 @@ class ResidualBatchNormConvBlock(torch.nn.Module):
         x = self.relu(x)
         return x
     
-class DeepResidualBatchNormConvBlock(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, **kwargs):
+class DeepResidualConvBlock(torch.nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int] = (3, 3), stride: int = 1, padding: int = 1, batch_norm: bool = True, **kwargs):
         super().__init__()
-        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=False)
-        self.conv3 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=False)
-        self.bn = torch.nn.BatchNorm2d(out_channels)
-        self.relu = torch.nn.LeakyReLU()
+        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=not batch_norm)
+        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=not batch_norm)
+        self.conv3 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding, bias=not batch_norm)
+        if batch_norm:
+            self.bn = torch.nn.BatchNorm2d(out_channels)
+            self.relu = torch.nn.LeakyReLU()
+        else:
+            self.bn = torch.nn.Identity()
+            self.relu = torch.nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         _x = x
@@ -116,40 +133,18 @@ class DeepResidualBatchNormConvBlock(torch.nn.Module):
 ### WITHOUT DOWNSAMPLING ###
 ############################
 
-class ResidualVAE(torch.nn.Module):
+class ResidualVAE(VAE):
     def __init__(self,
                  in_channels: int = 1,
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
-                 conv_block: torch.nn.Module = ResidualBatchNormConvBlock,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__()
-
-        self.latent_dim = 7 * n_kernels
-        if hidden_dims is None:
-            # Same as Elvira's model?
-            # hidden_dims = [16, 32, 64, 128, 256, 512, 1024]
-            hidden_dims = [16, 32, 64]
-
-        self.conv, in_channels, block_size = self._build_conv_layers(in_channels, hidden_dims, conv_block=conv_block, curr_block_size=block_size)
-        self.lin, in_channels = self._build_lin_layers(in_channels*block_size**2, hidden_dims, LinearBlock)
-
-        self.encoder = torch.nn.Sequential(
-            self.conv,
-            torch.nn.Flatten(),
-            self.lin
-        )
-
-        self.fc_mu = torch.nn.Linear(in_channels, self.latent_dim)
-        self.fc_var = torch.nn.Linear(in_channels, self.latent_dim)
-
-        self.output_nonlinearities = CustomLastLayerActivations(
-            (2*n_kernels, 1*n_kernels, 4*n_kernels),
-            (torch.nn.Sigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
-            )
+        conv_block = partial(ResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         
-    def _build_conv_layers(self, in_channels: int, hidden_dims: List[int], conv_block: ResidualDownsamplingConvBlock, curr_block_size: int, min_block_size: int = 2) -> torch.nn.Sequential:
+    def _build_conv_layers(self, in_channels: int, hidden_dims: List[int], conv_block: ResidualConvBlock, curr_block_size: int, min_block_size: int = 2) -> torch.nn.Sequential:
         conv_modules = []
         for h_dim in hidden_dims:
             layer = conv_block(in_channels=in_channels, out_channels=h_dim, curr_block_size=curr_block_size, min_block_size=min_block_size)
@@ -216,8 +211,10 @@ class ResidualKernelsOutsideVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualBatchNormConvBlock, **kwargs)
+        conv_block = partial(ResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
@@ -229,8 +226,10 @@ class ResidualNegativeExpertsVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualBatchNormConvBlock, **kwargs)
+        conv_block = partial(ResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (torch.nn.Sigmoid(), torch.nn.Tanh(), torch.nn.Identity())
@@ -242,8 +241,10 @@ class ResidualKernelsOutsideNegativeExpertsVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualBatchNormConvBlock, **kwargs)
+        conv_block = partial(ResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Tanh(), torch.nn.Identity())
@@ -257,8 +258,10 @@ class DeepResidualVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, DeepResidualBatchNormConvBlock, **kwargs)
+        conv_block = partial(DeepResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
 
 class DeepResidualKernelsOutsideVAE(ResidualVAE):
     def __init__(self,
@@ -266,8 +269,10 @@ class DeepResidualKernelsOutsideVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, DeepResidualBatchNormConvBlock, **kwargs)
+        conv_block = partial(DeepResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
@@ -279,8 +284,10 @@ class DeepResidualNegativeExpertsVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, DeepResidualBatchNormConvBlock, **kwargs)
+        conv_block = partial(DeepResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (torch.nn.Sigmoid(), torch.nn.Tanh(), torch.nn.Identity())
@@ -292,8 +299,10 @@ class DeepResidualKernelsOutsideNegativeExpertsVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, DeepResidualBatchNormConvBlock, **kwargs)
+        conv_block = partial(DeepResidualConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Tanh(), torch.nn.Identity())
@@ -305,12 +314,14 @@ class DeepResidualKernelsOutsideNegativeExpertsVAE(ResidualVAE):
 
 class ResidualDownsamplingVAE(ResidualVAE):
     def __init__(self,
-                in_channels: int = 1,
-                n_kernels: int = 4,
-                block_size: int = 16,
-                hidden_dims: List = None,
-                **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualDownsamplingConvBlock, **kwargs)
+                 in_channels: int = 1,
+                 n_kernels: int = 4,
+                 block_size: int = 16,
+                 hidden_dims: List = None,
+                 batch_norm: bool = False,
+                 **kwargs) -> None:
+        conv_block = partial(ResidualDownsamplingConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
 
 class ResidualDownsamplingKernelsOutsideVAE(ResidualVAE):
     def __init__(self,
@@ -318,8 +329,10 @@ class ResidualDownsamplingKernelsOutsideVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualDownsamplingConvBlock, **kwargs)
+        conv_block = partial(ResidualDownsamplingConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
@@ -331,8 +344,10 @@ class ResidualDownsamplingNegativeExpertsVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualDownsamplingConvBlock, **kwargs)
+        conv_block = partial(ResidualDownsamplingConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (torch.nn.Sigmoid(), torch.nn.Tanh(), torch.nn.Identity())
@@ -344,8 +359,10 @@ class ResidualDownsamplingKernelsOutsideNegativeExpertsVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, ResidualDownsamplingConvBlock, **kwargs)
+        conv_block = partial(ResidualDownsamplingConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Tanh(), torch.nn.Identity())
@@ -355,12 +372,14 @@ class ResidualDownsamplingKernelsOutsideNegativeExpertsVAE(ResidualVAE):
 
 class DeepResidualDownsamplingVAE(ResidualVAE):
     def __init__(self,
-                in_channels: int = 1,
-                n_kernels: int = 4,
-                block_size: int = 16,
-                hidden_dims: List = None,
-                **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, DeepResidualDownsamplingConvBlock, **kwargs)
+                 in_channels: int = 1,
+                 n_kernels: int = 4,
+                 block_size: int = 16,
+                 hidden_dims: List = None,
+                 batch_norm: bool = False,
+                 **kwargs) -> None:
+        conv_block = partial(DeepResidualDownsamplingConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
 
 class DeepResidualDownsamplingKernelsOutsideVAE(ResidualVAE):
     def __init__(self,
@@ -368,8 +387,10 @@ class DeepResidualDownsamplingKernelsOutsideVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, DeepResidualDownsamplingConvBlock, **kwargs)
+        conv_block = partial(DeepResidualDownsamplingConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Sigmoid(), torch.nn.Identity())
@@ -381,8 +402,10 @@ class DeepResidualDownsamplingNegativeExpertsVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, DeepResidualDownsamplingConvBlock, **kwargs)
+        conv_block = partial(DeepResidualDownsamplingConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (torch.nn.Sigmoid(), torch.nn.Tanh(), torch.nn.Identity())
@@ -394,8 +417,10 @@ class DeepResidualDownsamplingKernelsOutsideNegativeExpertsVAE(ResidualVAE):
                  n_kernels: int = 4,
                  block_size: int = 16,
                  hidden_dims: List = None,
+                 batch_norm: bool = False,
                  **kwargs) -> None:
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, DeepResidualDownsamplingConvBlock, **kwargs)
+        conv_block = partial(DeepResidualDownsamplingConvBlock, batch_norm=batch_norm)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),
             (ShiftedSigmoid(), torch.nn.Tanh(), torch.nn.Identity())

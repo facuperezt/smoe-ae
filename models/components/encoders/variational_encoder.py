@@ -81,21 +81,6 @@ class VAE(torch.nn.Module):
         self.conv, in_channels = self._build_conv_layers(in_channels, hidden_dims, conv_block, **kwargs.get("conv_args", {}))
         self.lin, in_channels = self._build_lin_layers(in_channels*block_size**2, hidden_dims, LinearBlock)
 
-        # hidden_dims_lin = [h_d for h_d in hidden_dims if h_d >= self.latent_dim]
-        # if len(hidden_dims_lin) == 0:
-        #     hidden_dims_lin = hidden_dims
-
-        # in_channels *= block_size**2
-        # lin_modules = []
-        # for h_dim in hidden_dims_lin[::-1]:
-
-        #     layer = LinearBlock(in_channels, h_dim)
-
-        #     lin_modules.append(layer)
-        #     in_channels = h_dim
-
-        # self.lin = torch.nn.Sequential(*lin_modules)
-
         self.encoder = torch.nn.Sequential(
             self.conv,
             torch.nn.Flatten(),
