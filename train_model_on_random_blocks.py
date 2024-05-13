@@ -287,7 +287,7 @@ if __name__ == "__main__":
 
     nr_epochs = 1500
     nr_batches = 25
-    batch_size = 600_000
+    batch_size = 200_000
     load_final = False
     input_is_img = False
     batch_norm = [True, False]
