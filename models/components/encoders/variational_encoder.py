@@ -2,7 +2,7 @@ from typing import List, Tuple
 import torch
 from torch.nn.modules import Module
 
-from models.components.conv_blocks.conv_blocks import BatchNormConvBlock, ConvBlock, CustomLastLayerActivations, DeepResidualDownsamplingConvBlock, LinearBlock, ResidualDownsamplingConvBlock, ShiftedSigmoid
+from models.components.conv_blocks.conv_blocks import BatchNormConvBlock, ConvBlock, CustomLastLayerActivations, DeepResidualDownsamplingConvBlock, LinearBlock, ResidualDownsamplingConvBlock, ShiftedSigmoid, SwishBatchNormConvBlock, SwishConvBlock
 
 __all__ = [
     'VanillaVAE',
@@ -118,9 +118,9 @@ class KernelsInsideVAE(VAE):
                  batch_norm: bool = False,
                  **kwargs) -> None:
         if batch_norm:
-            conv_block = BatchNormConvBlock
+            conv_block = SwishBatchNormConvBlock
         else:
-            conv_block = ConvBlock
+            conv_block = SwishConvBlock
         super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         self.output_nonlinearities = CustomLastLayerActivations(
             (2*n_kernels, 1*n_kernels, 4*n_kernels),

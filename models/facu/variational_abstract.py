@@ -10,6 +10,7 @@ class VAE_Abstract(torch.nn.Module):
         self.n_kernels = n_kernels
         self.img2block = Img2Block(block_size, img_size)
         self.block2img = Block2Img(block_size, img_size)
+        self.kld_loss = torch.nn.KLDivLoss(reduction='batchmean')
         self._encoder = None
         self._decoder = None
 
@@ -57,8 +58,11 @@ class VAE_Abstract(torch.nn.Module):
         max_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).max(dim=1).values, input.flatten(start_dim=1).max(dim=1).values)
         loss = recons_loss + min_recons_loss*0.25 + max_recons_loss*0.25
 
-        kld_weight = kwargs.get('kld_weight', 0.00025) # Account for the minibatch samples from the dataset
+        kld_weight = kwargs.get('kld_weight', 0.0) # Account for the minibatch samples from the dataset
         if kld_weight > 0:
+            if kwargs.get("ignore_steering_space", False):
+                mu = mu[:, :3*self.n_kernels]
+                log_var = log_var[:, :3*self.n_kernels]
             kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
             loss += kld_weight * kld_loss
         else:

@@ -56,6 +56,23 @@ class EarlyStoppingScoreHistory:
         diff = [self.last_scores[i] - self.last_scores[i-1] for i in range(1, len(self.last_scores))]
         return sum(diff)/len(diff)
 
+class KLD_Weight_CosineAnnealing:
+    def __init__(self, min_val, max_val, cycle_length, warmup: int = 50, wait_to_start: int = 50):
+        self.start_weight = max_val
+        self.end_weight = min_val
+        self.nr_epochs = cycle_length
+        self.current_epoch = 0
+        self.warmup = warmup
+        self.wait = wait_to_start
+
+    def __call__(self):
+        self.current_epoch += 1
+        val = self.start_weight + (self.end_weight - self.start_weight) * (1 + torch.cos(torch.tensor(self.current_epoch/self.nr_epochs) * 3.141592653589793))/2
+        if self.current_epoch < self.wait:
+            return 0.0
+        elif self.current_epoch < self.warmup + self.wait:
+            return ((self.current_epoch - self.wait)/self.warmup) * self.start_weight
+        return val
 
 class EarlyStopping:
     def __init__(self, patience=7, verbose=False, delta=0, memory_size=20, trace_func=print):
@@ -124,34 +141,35 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         [VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_negative_experts", 4e-2],
         [VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside_negative_experts", 4e-2],
         
-        [VAE_Residual(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_inside", 4e-4],
-        [VAE_Residual_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_negative_experts", 4e-4],
-        [VAE_Residual_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside", 4e-4],
-        [VAE_Residual_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside_negative_experts", 4e-4],
+        # [VAE_Residual(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_inside", 4e-4],
+        # [VAE_Residual_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_negative_experts", 4e-4],
+        # [VAE_Residual_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside", 4e-4],
+        # [VAE_Residual_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside_negative_experts", 4e-4],
 
-        [VAE_Residual_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_inside_downsampling", 4e-4],
-        [VAE_Residual_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_negative_experts_downsampling", 4e-4],
-        [VAE_Residual_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside_downsampling", 4e-4],
-        [VAE_Residual_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside_negative_experts_downsampling", 4e-4],
+        # [VAE_Residual_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_inside_downsampling", 4e-4],
+        # [VAE_Residual_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_negative_experts_downsampling", 4e-4],
+        # [VAE_Residual_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside_downsampling", 4e-4],
+        # [VAE_Residual_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside_negative_experts_downsampling", 4e-4],
 
-        [VAE_Residual_DeepConv(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_inside", 4e-4],
-        [VAE_Residual_DeepConv_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_negative_experts", 4e-4],
-        [VAE_Residual_DeepConv_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_outside", 4e-4],
-        [VAE_Residual_DeepConv_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_outside_negative_experts", 4e-4],
+        # [VAE_Residual_DeepConv(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_inside", 4e-4],
+        # [VAE_Residual_DeepConv_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_negative_experts", 4e-4],
+        # [VAE_Residual_DeepConv_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_outside", 4e-4],
+        # [VAE_Residual_DeepConv_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_outside_negative_experts", 4e-4],
 
-        [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "NO_LOG_VAR_residual_deep_conv_vae_kernels_inside_downsampling", 1e-4],
-        [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 1e-4],
-        [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "NO_LOG_VAR_residual_deep_conv_vae_negative_experts_downsampling", 1e-4],
-        [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_downsampling", 1e-4],
+        # [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "NO_LOG_VAR_residual_deep_conv_vae_kernels_inside_downsampling", 1e-4],
+        # [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 1e-4],
+        # [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "NO_LOG_VAR_residual_deep_conv_vae_negative_experts_downsampling", 1e-4],
+        # [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "NO_LOG_VAR_residual_deep_conv_vae_kernels_outside_downsampling", 1e-4],
 
-        [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_inside_downsampling", 1e-3],
-        [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 1e-3],
-        [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_negative_experts_downsampling", 1e-3],
-        [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_outside_downsampling", 1e-3],
+        # [VAE_Residual_DeepConv_Downsampling(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_inside_downsampling", 1e-3],
+        # [VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_outside_negative_experts_downsampling", 1e-3],
+        # [VAE_Residual_DeepConv_Downsampling_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_negative_experts_downsampling", 1e-3],
+        # [VAE_Residual_DeepConv_Downsampling_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_deep_conv_vae_kernels_outside_downsampling", 1e-3],
         
         # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device), "mlp", 1e-4],
         # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2]), "mlp_big", 1e-4],
     ]:
+        
         model: VAE_Abstract
         if load_final:
             model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth"))
@@ -176,6 +194,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         optimizer = torch.optim.SGD(model.parameters(), lr=lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=nr_epochs//20, cooldown=nr_epochs//40, verbose=False)
         early_stopping = EarlyStopping(patience=nr_epochs//10, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
+        kld_annealing = KLD_Weight_CosineAnnealing(0, _kld_loss, 100, nr_batches//5, 200)
 
         os.makedirs(f"models/facu/checkpoints/{model_name}_random_blocks/", exist_ok=True)
         os.makedirs(f"models/facu/images2/{model_name}_random_blocks/", exist_ok=True)
@@ -202,15 +221,10 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                         loss_present = False
                         x = model.decoder(x_batch.to(device)).float()
                         x_hat, x, mu, log_var, z = model(x, return_all=True, input_is_img=input_is_img)
-                        if epoch < nr_epochs*0.15:
-                            kld_loss = 0
-                        elif nr_epochs*0.15 <= epoch < nr_epochs*0.3:
-                            # kld_loss is a linear function that goes from 0 to 1e-6
-                            kld_loss = _kld_loss * (epoch - nr_epochs*0.15) / (nr_epochs*0.3 - nr_epochs*0.15)
-                        else:
-                            kld_loss = _kld_loss
-                        losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss)
+                        kld_loss = kld_annealing()
+                        losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss, ignore_steering_space=True)
                         loss = losses["loss"]
+                        losses["kld_weight"] = kld_loss
                         mean_epoch_reconstr_loss += losses["Reconstruction_Loss"].item()
                         mean_epoch_kl_loss += losses["KLD"].item()
                         total_loss += loss
@@ -258,16 +272,16 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
             wandb.finish(1)
 
 if __name__ == "__main__":
-    n_kernels, block_size, img_size = 5, 64, 256
+    n_kernels, block_size, img_size = 4, 16, 512
     train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
 
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-    hidden_dims = [8, 8, 16, 16, 32, 64]
+    hidden_dims = [2, 4, 8, 16, 32, 64, 128]
 
-    nr_epochs = 100
-    nr_batches = 100
-    batch_size = 1_000
+    nr_epochs = 1000
+    nr_batches = 10
+    batch_size = 1_000_000
     load_final = False
     input_is_img = False
     batch_norm = [True, False]
