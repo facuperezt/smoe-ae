@@ -219,6 +219,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                 #                                         negative_experts="negativeexperts" in str(model.__class__).lower())
                 with tqdm.tqdm(total=nr_batches, desc=f"Batch 0 - Loss: 0.0", disable=disable_tqdm) as pbar:
                     batch = 0
+                    kld_loss = kld_annealing()
                     while batch < nr_batches:
                         x_batch = train_loader.get_m_blocks_with_n_kernels(min(batch_size, 500_000//model._encoder._block_size**2), n_kernels, kernels_outside="kernelsoutside" in str(model.__class__).lower(), 
                                             negative_experts="negativeexperts" in str(model.__class__).lower(), device=device)
@@ -227,7 +228,6 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                         loss_present = False
                         x = model.decoder(x_batch.to(device)).float()
                         x_hat, x, mu, log_var, z = model(x, return_all=True, input_is_img=input_is_img)
-                        kld_loss = kld_annealing()
                         losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss, ignore_steering_space=kld_ignore_steering_space)
                         loss = losses["loss"]
                         losses["kld_weight"] = kld_loss
@@ -235,7 +235,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                         mean_epoch_kl_loss += losses["KLD"].item()
                         total_loss += loss
                         loss_present = True
-                        if torch.cuda.memory_allocated() > torch.cuda.mem_get_info()[1]*0.7:
+                        if torch.cuda.memory_allocated() > torch.cuda.mem_get_info()[1]*0.85:
                             total_loss.backward()  # Has to be computed on every few batches to prevent memory leaks
                             mean_epoch_loss += total_loss.item()
                             total_loss = torch.tensor(0.0, device=device)
