@@ -198,9 +198,9 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         wandb.watch(model, log="gradients", log_freq=nr_epochs//20)
         print(f"Number of params for model '{model_name}': {nr_model_params}")
         optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=nr_epochs//20, cooldown=nr_epochs//40, verbose=False)
-        early_stopping = EarlyStopping(patience=nr_epochs//10, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
-        kld_annealing = KLD_Weight_CosineAnnealing(0, kld_loss, 100, nr_batches//5, 200)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=50, cooldown=20, verbose=False)
+        early_stopping = EarlyStopping(patience=100, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
+        kld_annealing = KLD_Weight_CosineAnnealing(0, kld_loss, nr_batches//5, 200, 200)
 
         os.makedirs(f"models/facu/checkpoints/{model_name}_random_blocks/", exist_ok=True)
         os.makedirs(f"models/facu/images2/{model_name}_random_blocks/", exist_ok=True)
