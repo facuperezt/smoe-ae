@@ -283,7 +283,7 @@ if __name__ == "__main__":
 
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-    hidden_dims = [2, 4, 8, 16, 32, 64, 128]
+    hidden_dims = [2, 4, 8, 16, 32, 64, 128, 256]
 
     nr_epochs = 2000
     nr_batches = 50
