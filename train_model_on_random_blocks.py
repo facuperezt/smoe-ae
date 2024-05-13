@@ -286,7 +286,7 @@ if __name__ == "__main__":
     hidden_dims = [2, 4, 8, 16, 32, 64, 128, 256]
 
     nr_epochs = 1500
-    nr_batches = 25
+    nr_batches = 15
     batch_size = 2_500
     load_final = False
     input_is_img = False
