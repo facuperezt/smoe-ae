@@ -221,7 +221,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                     batch = 0
                     kld_loss = kld_annealing()
                     while batch < nr_batches:
-                        x_batch = train_loader.get_m_blocks_with_n_kernels(min(batch_size, 500_000//model._encoder._block_size**2), n_kernels, kernels_outside="kernelsoutside" in str(model.__class__).lower(), 
+                        x_batch = train_loader.get_m_blocks_with_n_kernels(batch_size, n_kernels, kernels_outside="kernelsoutside" in str(model.__class__).lower(), 
                                             negative_experts="negativeexperts" in str(model.__class__).lower(), device=device)
                         optimizer.zero_grad()
                         total_loss = torch.tensor(0.0, device=device)
@@ -299,4 +299,4 @@ if __name__ == "__main__":
     for bn in batch_norm:
         for kld in kld_params_list:
             train_models(n_kernels, block_size, img_size, hidden_dims, bn, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, kld,
-                         mode="online")
+                         mode="disabled")
