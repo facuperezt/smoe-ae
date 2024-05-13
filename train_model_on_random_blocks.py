@@ -137,8 +137,8 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device), "elvira", 1e-3],
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]), "elvira_small", 1e-4],
 
-        [VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_inside", 4e-2],
-        [VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside", 4e-2],
+        [VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_inside", 4e-3],
+        [VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside", 4e-3],
         # [VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_negative_experts", 4e-2],
         # [VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside_negative_experts", 4e-2],
         
@@ -299,4 +299,4 @@ if __name__ == "__main__":
     for bn in batch_norm:
         for kld in kld_params_list:
             train_models(n_kernels, block_size, img_size, hidden_dims, bn, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, kld,
-                         mode="disabled")
+                         mode="online")
