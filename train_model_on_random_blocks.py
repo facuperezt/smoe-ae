@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Dict
 import torch
 from PIL import Image
 import tqdm
@@ -131,7 +132,7 @@ def plot_grad_flow(named_parameters):
     plt.grid(True)
     plt.show()
 
-def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, _kld_loss, mode="disabled"):
+def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, kld_loss_params: Dict = None, mode="disabled"):
     for model, model_name, lr in [
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device), "elvira", 1e-3],
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]), "elvira_small", 1e-4],
@@ -169,13 +170,17 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device), "mlp", 1e-4],
         # [SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2]), "mlp_big", 1e-4],
     ]:
-        
+        if kld_loss_params is None:
+            kld_loss = 1e-4
+            kld_ignore_steering_space = False
+        else:
+            kld_loss = kld_loss_params.get("kld_loss", 1e-4)
+            kld_ignore_steering_space = kld_loss_params.get("ignore_steering_space", False)
         model: VAE_Abstract
         if load_final:
             model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth"))
         disable_tqdm = False
         nr_model_params = sum(p.numel() for p in model.parameters())
-        # start disabled run
         run = wandb.init(mode=mode,
                         name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                         config={
@@ -187,6 +192,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                             "device": device,
                             "epochs": nr_epochs,
                             "initial_lr": lr,
+                            "ignore_steering_space": kld_ignore_steering_space,
                         }
                     )
         wandb.watch(model, log="gradients", log_freq=nr_epochs//20)
@@ -194,7 +200,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         optimizer = torch.optim.SGD(model.parameters(), lr=lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=nr_epochs//20, cooldown=nr_epochs//40, verbose=False)
         early_stopping = EarlyStopping(patience=nr_epochs//10, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
-        kld_annealing = KLD_Weight_CosineAnnealing(0, _kld_loss, 100, nr_batches//5, 200)
+        kld_annealing = KLD_Weight_CosineAnnealing(0, kld_loss, 100, nr_batches//5, 200)
 
         os.makedirs(f"models/facu/checkpoints/{model_name}_random_blocks/", exist_ok=True)
         os.makedirs(f"models/facu/images2/{model_name}_random_blocks/", exist_ok=True)
@@ -222,7 +228,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                         x = model.decoder(x_batch.to(device)).float()
                         x_hat, x, mu, log_var, z = model(x, return_all=True, input_is_img=input_is_img)
                         kld_loss = kld_annealing()
-                        losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss, ignore_steering_space=True)
+                        losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss, ignore_steering_space=kld_ignore_steering_space)
                         loss = losses["loss"]
                         losses["kld_weight"] = kld_loss
                         mean_epoch_reconstr_loss += losses["Reconstruction_Loss"].item()
@@ -279,15 +285,18 @@ if __name__ == "__main__":
 
     hidden_dims = [2, 4, 8, 16, 32, 64, 128]
 
-    nr_epochs = 1000
-    nr_batches = 10
+    nr_epochs = 2000
+    nr_batches = 50
     batch_size = 1_000_000
     load_final = False
     input_is_img = False
     batch_norm = [True, False]
-    _kld_loss = [1e-8, 1e-6, 1e-4]
+    kld_params_list = [{"kld_loss": 1e-4, "ignore_steering_space": False},
+                       {"kld_loss": 1e-4, "ignore_steering_space": True},
+                       {"kld_loss": 1e-3, "ignore_steering_space": False},
+                       {"kld_loss": 1e-3, "ignore_steering_space": True},]
 
     for bn in batch_norm:
-        for kld in _kld_loss:
+        for kld in kld_params_list:
             train_models(n_kernels, block_size, img_size, hidden_dims, bn, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, kld,
                          mode="online")
