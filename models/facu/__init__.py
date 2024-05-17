@@ -1,6 +1,8 @@
-from .variational_vanilla import    VAE_KernelsInside,                  VAE_NegativeExperts,                                VAE_KernelsOutside,                                VAE_KernelsOutsideNegativeExperts
+from .variational_vanilla import    VAE_KernelsInside,                  VAE_NegativeExperts,                                VAE_KernelsOutside,                                VAE_KernelsOutsideNegativeExperts, \
+                                    VAE_SwishKernelsInside,             VAE_SwishKernelsOutside,                            VAE_SwishNegativeExperts,                          VAE_SwishKernelsOutsideNegativeExperts
 from .variational_residual import   VAE_Residual,                       VAE_Residual_NegativeExperts,                       VAE_Residual_KernelsOutside,                       VAE_Residual_KernelsOutsideNegativeExperts, \
                                     VAE_Residual_Downsampling,          VAE_Residual_Downsampling_NegativeExperts,          VAE_Residual_Downsampling_KernelsOutside,          VAE_Residual_Downsampling_KernelsOutsideNegativeExperts, \
                                     VAE_Residual_DeepConv,              VAE_Residual_DeepConv_NegativeExperts,              VAE_Residual_DeepConv_KernelsOutside,              VAE_Residual_DeepConv_KernelsOutsideNegativeExperts, \
                                     VAE_Residual_DeepConv_Downsampling, VAE_Residual_DeepConv_Downsampling_NegativeExperts, VAE_Residual_DeepConv_Downsampling_KernelsOutside, VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts
 from .simple_mlp import SimpleMLP
+from .convolutional_vanilla import  CAE_Codec

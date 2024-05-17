@@ -64,7 +64,7 @@ def get_m_samples(n_blocks: int, n_kernels: int, kernels_outside: bool = False, 
     nu = _sample_nu_2d(n_blocks, n_kernels, negative_experts, device)
     one = torch.cat((x, y, nu), dim=1)
     abc = _sample_chol_decomp_2d(n_blocks, n_kernels, vmin, vmax, include_zero, device).flatten(start_dim=1)
-    return torch.cat((one, abc), dim=1)
+    return torch.cat((one, abc), dim=1).float()
 
 def get_m_samples_with_n_kernels(m: int, n: int, pad: float = 0.0, negative_experts: bool = False, vmin: float = -5, vmax: float = 5, include_zero: bool = False):
     out = []

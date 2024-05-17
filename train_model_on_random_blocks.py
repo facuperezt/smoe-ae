@@ -9,7 +9,8 @@ from models.facu import VAE_KernelsInside, VAE_KernelsOutside, VAE_NegativeExper
         VAE_Residual, VAE_Residual_NegativeExperts, VAE_Residual_KernelsOutside, VAE_Residual_KernelsOutsideNegativeExperts,\
         VAE_Residual_Downsampling, VAE_Residual_Downsampling_NegativeExperts, VAE_Residual_Downsampling_KernelsOutside, VAE_Residual_Downsampling_KernelsOutsideNegativeExperts, \
         VAE_Residual_DeepConv, VAE_Residual_DeepConv_NegativeExperts, VAE_Residual_DeepConv_KernelsOutside, VAE_Residual_DeepConv_KernelsOutsideNegativeExperts, \
-        VAE_Residual_DeepConv_Downsampling, VAE_Residual_DeepConv_Downsampling_NegativeExperts, VAE_Residual_DeepConv_Downsampling_KernelsOutside, VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts
+        VAE_Residual_DeepConv_Downsampling, VAE_Residual_DeepConv_Downsampling_NegativeExperts, VAE_Residual_DeepConv_Downsampling_KernelsOutside, VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts, \
+        VAE_SwishKernelsInside, VAE_SwishKernelsOutside, VAE_SwishNegativeExperts, VAE_SwishKernelsOutsideNegativeExperts
 from models.elvira import Vanilla
 from models.facu.variational_abstract import VAE_Abstract
 import wandb
@@ -68,12 +69,11 @@ class KLD_Weight_CosineAnnealing:
 
     def __call__(self):
         self.current_epoch += 1
-        val = self.start_weight + (self.end_weight - self.start_weight) * (1 + torch.cos(torch.tensor(self.current_epoch/self.nr_epochs) * 3.141592653589793))/2
         if self.current_epoch < self.wait:
             return 0.0
         elif self.current_epoch < self.warmup + self.wait:
             return ((self.current_epoch - self.wait)/self.warmup) * self.start_weight
-        return val
+        return self.start_weight + (self.end_weight - self.start_weight) * (1 + torch.cos(torch.tensor(self.current_epoch/self.nr_epochs) * 3.141592653589793))/2
 
 class EarlyStopping:
     def __init__(self, patience=7, verbose=False, delta=0, memory_size=20, trace_func=print):
@@ -138,10 +138,15 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]), "elvira_small", 1e-4],
 
         [VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_inside", 4e-3],
-        [VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside", 4e-3],
+        # [VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside", 4e-3],
         # [VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_negative_experts", 4e-2],
         # [VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside_negative_experts", 4e-2],
         
+        # [VAE_SwishKernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "swish_vae_kernels_inside", 4e-3],
+        # [VAE_SwishKernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "swish_vae_kernels_outside", 4e-3],
+        # [VAE_SwishNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "swish_vae_negative_experts", 4e-3],
+        # [VAE_SwishKernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "swish_vae_kernels_outside_negative_experts", 4e-3],
+
         # [VAE_Residual(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_inside", 4e-4],
         # [VAE_Residual_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_negative_experts", 4e-4],
         # [VAE_Residual_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, device=device, batch_norm=batch_norm), "residual_vae_kernels_outside", 4e-4],
@@ -200,7 +205,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         optimizer = torch.optim.SGD(model.parameters(), lr=lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=50, cooldown=20, verbose=False)
         early_stopping = EarlyStopping(patience=100, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
-        kld_annealing = KLD_Weight_CosineAnnealing(0, kld_loss, nr_batches//5, 200, 200)
+        kld_annealing = KLD_Weight_CosineAnnealing(0, kld_loss, nr_epochs//5, nr_epochs//10, nr_epochs//10)
 
         os.makedirs(f"models/facu/checkpoints/{model_name}_random_blocks/", exist_ok=True)
         os.makedirs(f"models/facu/images2/{model_name}_random_blocks/", exist_ok=True)
@@ -227,8 +232,10 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
                         total_loss = torch.tensor(0.0, device=device)
                         loss_present = False
                         x = model.decoder(x_batch.to(device)).float()
-                        x_hat, x, mu, log_var, z = model(x, return_all=True, input_is_img=input_is_img)
-                        losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss, ignore_steering_space=kld_ignore_steering_space)
+                        # x_hat, x, mu, log_var, z = model(x, return_all=True, input_is_img=input_is_img)
+                        # losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss, ignore_steering_space=kld_ignore_steering_space)
+                        out = model(x, return_all=True, input_is_img=input_is_img)
+                        losses = model.loss_function(*out, kld_weight=kld_loss, ignore_steering_space=kld_ignore_steering_space)
                         loss = losses["loss"]
                         losses["kld_weight"] = kld_loss
                         mean_epoch_reconstr_loss += losses["Reconstruction_Loss"].item()
@@ -277,26 +284,166 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
             print("Training interrupted")
             wandb.finish(1)
 
+def plot_all(model, valid_pic):
+    import torch
+    import seaborn as sns
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    with torch.no_grad():
+        recon_mu, recon_s = [a.detach().cpu().numpy() for a in model.encoder.encode(model.img2block(valid_pic)[:, None])]
+
+    x  = recon_mu[:, 0*n_kernels:1*n_kernels].flatten()
+    y  = recon_mu[:, 1*n_kernels:2*n_kernels].flatten()
+    nu = recon_mu[:, 2*n_kernels:3*n_kernels].flatten()
+
+    xs = recon_s[:, 0*n_kernels:1*n_kernels].flatten()
+    ys = recon_s[:, 1*n_kernels:2*n_kernels].flatten()
+    nus = recon_s[:, 2*n_kernels:3*n_kernels].flatten()
+
+    fig, axs = plt.subplots(1, 2)
+    fig.suptitle("Reconstructed latent space - shared color")
+    axs[0].scatter(x, y, c=nu, cmap="jet")
+    axs[0].set_title("Mean")
+    a = axs[1].scatter(xs, ys, c=nu, cmap="jet")
+    axs[1].set_title("log - Variance")
+    plt.colorbar(a)
+
+    fig, axs = plt.subplots(1, 2)
+    fig.suptitle("Reconstructed latent space - shared color")
+    axs[0].scatter(x, y, c=nu, cmap="jet")
+    axs[0].set_title("Mean")
+    a = axs[1].scatter(np.exp(xs), np.exp(ys), c=nu, cmap="jet")
+    axs[1].set_title("Variance")
+    plt.colorbar(a)
+
+    # plt.scatter(x, y, c=np.exp(xs)+np.exp(ys), cmap="Reds")
+    # plt.colorbar()
+    plt.figure()
+    plt.title("Reconstructed latent space")
+    plt.hexbin(x, y, np.exp(xs)+np.exp(ys), marginals=True)
+
+    with torch.no_grad():
+        recon = model.encoder(model.img2block(valid_pic)[:, None])[0].detach().cpu()
+
+    x  = recon[:, 0*n_kernels:1*n_kernels].flatten()
+    y  = recon[:, 1*n_kernels:2*n_kernels].flatten()
+    nu = recon[:, 2*n_kernels:3*n_kernels].flatten()
+
+    plt.figure()
+    plt.title("Reconstructed latent space - after repameterization")
+    plt.scatter(x, y, c=nu, cmap="jet")
+    plt.colorbar()
+    plt.show()
+
+    plt.figure()
+    # Plot seaborn histogram overlaid with KDE
+    ax = sns.histplot(data=x, bins=20, stat='density', alpha= 1, kde=True,
+                    edgecolor='white', linewidth=0.5,
+                    line_kws=dict(color='black', alpha=0.5, linewidth=1.5, label='KDE'))
+    ax.get_lines()[0].set_color('black') # edit line color due to bug in sns v 0.11.0
+    # Edit legemd and add title
+    ax.legend(frameon=False)
+    ax.set_title('Seaborn histogram overlaid with KDE', fontsize=14, pad=15)
+    plt.show()
+
+    plt.figure()
+    plt.title("Reconstructed latent space - after repameterization")
+    plt.hexbin(x, y, nu, marginals=True)
+    plt.show()
+
 if __name__ == "__main__":
     n_kernels, block_size, img_size = 4, 16, 512
     train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
 
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
-    hidden_dims = [2, 4, 8, 16, 32, 64, 128, 256]
+    hidden_dims = [2, 4, 8, 16, 32, 64, 128]
 
-    nr_epochs = 1500
+    # nr_epochs = 1500
+    nr_epochs = 1000
     nr_batches = 15
+    
     batch_size = 2_500
-    load_final = False
+    load_final = True
     input_is_img = False
-    batch_norm = [True, False]
-    kld_params_list = [{"kld_loss": 1e-4, "ignore_steering_space": False},
-                       {"kld_loss": 1e-4, "ignore_steering_space": True},
-                       {"kld_loss": 1e-3, "ignore_steering_space": False},
-                       {"kld_loss": 1e-3, "ignore_steering_space": True},]
+    batch_norm = [True]
+    kld_params_list = [
+        {"kld_loss": 3e-5, "ignore_steering_space": False},
+        {"kld_loss": 3e-5, "ignore_steering_space": True},
+    ]
 
     for bn in batch_norm:
         for kld in kld_params_list:
             train_models(n_kernels, block_size, img_size, hidden_dims, bn, device, nr_epochs, nr_batches, batch_size, load_final, input_is_img, kld,
-                         mode="online")
+                         mode="disabled")
+            
+"""
+
+import torch
+import seaborn as sns
+import numpy as np
+import matplotlib.pyplot as plt
+
+with torch.no_grad():
+    recon_mu, recon_s = [a.detach().cpu().numpy() for a in model.encoder.encode(model.img2block(valid_pic)[:, None])]
+
+x  = recon_mu[:, 0*n_kernels:1*n_kernels].flatten()
+y  = recon_mu[:, 1*n_kernels:2*n_kernels].flatten()
+nu = recon_mu[:, 2*n_kernels:3*n_kernels].flatten()
+
+xs = recon_s[:, 0*n_kernels:1*n_kernels].flatten()
+ys = recon_s[:, 1*n_kernels:2*n_kernels].flatten()
+nus = recon_s[:, 2*n_kernels:3*n_kernels].flatten()
+
+fig, axs = plt.subplots(1, 2)
+fig.suptitle("Reconstructed latent space - shared color")
+axs[0].scatter(x, y, c=nu, cmap="jet")
+axs[0].set_title("Mean")
+a = axs[1].scatter(xs, ys, c=nu, cmap="jet")
+axs[1].set_title("log - Variance")
+plt.colorbar(a)
+
+fig, axs = plt.subplots(1, 2)
+fig.suptitle("Reconstructed latent space - shared color")
+axs[0].scatter(x, y, c=nu, cmap="jet")
+axs[0].set_title("Mean")
+a = axs[1].scatter(np.exp(xs), np.exp(ys), c=nu, cmap="jet")
+axs[1].set_title("Variance")
+plt.colorbar(a)
+
+# plt.scatter(x, y, c=np.exp(xs)+np.exp(ys), cmap="Reds")
+# plt.colorbar()
+plt.figure()
+plt.title("Reconstructed latent space")
+plt.hexbin(x, y, np.exp(xs)+np.exp(ys), marginals=True)
+
+with torch.no_grad():
+    recon = model.encoder(model.img2block(valid_pic)[:, None])[0].detach().cpu()
+
+x  = recon[:, 0*n_kernels:1*n_kernels].flatten()
+y  = recon[:, 1*n_kernels:2*n_kernels].flatten()
+nu = recon[:, 2*n_kernels:3*n_kernels].flatten()
+
+plt.figure()
+plt.title("Reconstructed latent space - after repameterization")
+plt.scatter(x, y, c=nu, cmap="jet")
+plt.colorbar()
+plt.show()
+
+# Plot seaborn histogram overlaid with KDE
+ax = sns.histplot(data=x, bins=20, stat='density', alpha= 1, kde=True,
+                  edgecolor='white', linewidth=0.5,
+                  line_kws=dict(color='black', alpha=0.5, linewidth=1.5, label='KDE'))
+ax.get_lines()[0].set_color('black') # edit line color due to bug in sns v 0.11.0
+# Edit legemd and add title
+ax.legend(frameon=False)
+ax.set_title('Seaborn histogram overlaid with KDE', fontsize=14, pad=15)
+plt.show()
+
+plt.figure()
+plt.title("Reconstructed latent space - after repameterization")
+plt.hexbin(x, y, nu, marginals=True)
+plt.show()
+
+"""

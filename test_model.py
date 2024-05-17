@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from models.elvira import Vanilla
 from models.facu import VAE, VAE_KernelsOutside, VAE_NegativeExperts, VAE_KernelsOutsideNegativeExperts, SimpleMLP, VAE_Residual_DeepConv_Downsampling
 
-from analyze_models import load_model
+from analyze_models_old import load_model
 from utils import plot_kernels_chol, plot_kernel_centers, shade_kernel_areas
 
 def test_elvira_vanilla():
