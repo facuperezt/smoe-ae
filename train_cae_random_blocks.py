@@ -235,12 +235,14 @@ def train_models(n_kernels: int,
                     inds = ((reconstructed_blocks[:, None] - orig_blocks)**2).flatten(start_dim=1).mean(dim=1).sort().indices
                     best_recon = reconstructed_blocks[inds[-1], :].squeeze().detach().cpu().numpy()
                     worst_recon = reconstructed_blocks[inds[0], :].squeeze().detach().cpu().numpy()
+                    orig_best_recon = orig_blocks[inds[-1], :].squeeze().detach().cpu().numpy()
+                    orig_worst_recon = orig_blocks[inds[0], :].squeeze().detach().cpu().numpy()
                     # recon = model(valid_pic)[0].detach().cpu().numpy().squeeze()
                     if False:
                         plot_all(model, valid_pic)
                 
                 # save image in wandb
-                wandb.log({"reconstructed": [wandb.Image(recon*255)], "best_recon": [wandb.Image(best_recon*255)], "worst_recon": [wandb.Image(worst_recon*255)]}, commit=False)
+                wandb.log({"reconstructed": [wandb.Image(recon*255)], "best_recon": {"recon":[wandb.Image(best_recon*255)], "orig": [wandb.Image(orig_best_recon*255)]}, "worst_recon": {"recon": [wandb.Image(worst_recon*255)], "orig": [wandb.Image(orig_worst_recon*255)]}}, commit=False)
                 # save learning rate
                 wandb.log({"learning_rate": optimizer.param_groups[0]['lr']}, commit=False)
                 # save mean epoch loss

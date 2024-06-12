@@ -49,7 +49,7 @@ class CAE_Abstract(torch.nn.Module):
 
         losses = {}
         loss = 0
-        recons_loss = torch.nn.functional.mse_loss(recons, input)
+        recons_loss = (recons - input).abs().mean()
         min_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).min(dim=1).values, input.flatten(start_dim=1).min(dim=1).values)
         max_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).max(dim=1).values, input.flatten(start_dim=1).max(dim=1).values)
         losses = {**losses, "Reconstruction_Loss": recons_loss.detach(), "min_recons_loss": min_recons_loss.detach(), "max_recons_loss": max_recons_loss.detach()}
