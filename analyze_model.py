@@ -138,9 +138,7 @@ def plot_grad_flow(named_parameters):
     plt.show()
 
 #%%
-def plot_latent_space_conv(model: VAE_Abstract):
-    
-    
+def plot_latent_space_conv(model: CAE_Codec):
     data = train_loader.get_m_blocks_with_n_kernels(batch_size, n_kernels, kernels_outside="kernelsoutside" in str(model.__class__).lower(), 
                                             negative_experts="negativeexperts" in str(model.__class__).lower(), device=device)
     
@@ -353,9 +351,9 @@ nr_epochs = 1000
 nr_batches = 15
 
 batch_size = 2_500
-load_final = False
+load_final = True
 input_is_img = False
-batch_norm = True
+batch_norm = False
 negative_experts = False
 kernels_outside = False
 downsample = False
@@ -372,9 +370,9 @@ kld_params_list = [
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
 
 for model, model_name, lr in [
-    # (CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=kernels_outside, negative_experts=negative_experts, batch_norm=batch_norm, device=device,
-    #         bias=bias, downsample=downsample, residual=residual, dropout=dropout, order=order, activation=activation), "cae_codec", 1e-3),
-    (VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=kernels_outside, negative_experts=negative_experts, batch_norm=batch_norm, device=device,), "vae_kernelsinside", 1e-3),
+    (CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=kernels_outside, negative_experts=negative_experts, batch_norm=batch_norm, device=device,
+            bias=bias, downsample=downsample, residual=residual, dropout=dropout, order=order, activation=activation), "cae_kernels_inside", 1e-3),
+    (VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=True, device=device, conv_args = {"bias": False}), "vae_kernels_inside", 1e-3),
 ]:
     if load_final:
         model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth"))
@@ -383,7 +381,7 @@ for model, model_name, lr in [
     print(f"Number of params for model '{model_name}': {nr_model_params}")
     valid_pic = train_loader.get_valid_pic()
     valid_pic = valid_pic.to(device)
-    plot_latent_space_variational(model)
+    plot_latent_space_conv(model)
     plt.show()
 
 # %%

@@ -5,12 +5,7 @@ import torch
 from PIL import Image
 import tqdm
 from data import DataLoader
-from models.facu import VAE_KernelsInside, VAE_KernelsOutside, VAE_NegativeExperts, VAE_KernelsOutsideNegativeExperts, SimpleMLP,\
-        VAE_Residual, VAE_Residual_NegativeExperts, VAE_Residual_KernelsOutside, VAE_Residual_KernelsOutsideNegativeExperts,\
-        VAE_Residual_Downsampling, VAE_Residual_Downsampling_NegativeExperts, VAE_Residual_Downsampling_KernelsOutside, VAE_Residual_Downsampling_KernelsOutsideNegativeExperts, \
-        VAE_Residual_DeepConv, VAE_Residual_DeepConv_NegativeExperts, VAE_Residual_DeepConv_KernelsOutside, VAE_Residual_DeepConv_KernelsOutsideNegativeExperts, \
-        VAE_Residual_DeepConv_Downsampling, VAE_Residual_DeepConv_Downsampling_NegativeExperts, VAE_Residual_DeepConv_Downsampling_KernelsOutside, VAE_Residual_DeepConv_Downsampling_KernelsOutsideNegativeExperts, \
-        VAE_SwishKernelsInside, VAE_SwishKernelsOutside, VAE_SwishNegativeExperts, VAE_SwishKernelsOutsideNegativeExperts
+from models.facu import *
 from models.elvira import Vanilla
 from models.facu.variational_abstract import VAE_Abstract
 import wandb
@@ -137,7 +132,12 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device), "elvira", 1e-3],
         # [Vanilla(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64]), "elvira_small", 1e-4],
 
-        [VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_inside", 4e-3],
+        [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=False, negative_experts=False, downsample=False, batch_norm=batch_norm, device=device), "cae_kernels_inside", 1e-4],
+        [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=True, negative_experts=False, downsample=False, batch_norm=batch_norm, device=device), "cae_kernels_outside", 1e-4],
+        [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=False, negative_experts=True, downsample=False, batch_norm=batch_norm, device=device), "cae_negative_experts", 1e-4],
+        [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=True, negative_experts=True, downsample=False, batch_norm=batch_norm, device=device), "cae_kernels_outside_negative_experts", 1e-4],
+
+        # [VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_inside", 4e-3],
         # [VAE_KernelsOutside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside", 4e-3],
         # [VAE_NegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_negative_experts", 4e-2],
         # [VAE_KernelsOutsideNegativeExperts(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=batch_norm, device=device), "vae_kernels_outside_negative_experts", 4e-2],
@@ -216,6 +216,7 @@ def train_models(n_kernels, block_size, img_size, hidden_dims, batch_norm, devic
         valid_pic = valid_pic.to(device)
         try:
             outter_pbar = tqdm.tqdm(range(nr_epochs), desc=f"Epoch Loss: 0.0 - LR: {optimizer.param_groups[0]['lr']:.2e}", disable=disable_tqdm)
+            x = None
             for epoch in outter_pbar:
                 mean_epoch_loss = 0
                 mean_epoch_reconstr_loss = 0
@@ -365,7 +366,7 @@ if __name__ == "__main__":
     nr_batches = 15
     
     batch_size = 2_500
-    load_final = True
+    load_final = False
     input_is_img = False
     batch_norm = [True]
     kld_params_list = [
@@ -447,3 +448,5 @@ plt.hexbin(x, y, nu, marginals=True)
 plt.show()
 
 """
+
+
