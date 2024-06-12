@@ -47,10 +47,18 @@ class CAE_Abstract(torch.nn.Module):
         latent = args[2]
         original_latent = args[3]
 
+        losses = {}
+        loss = 0
         recons_loss = torch.nn.functional.mse_loss(recons, input)
         min_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).min(dim=1).values, input.flatten(start_dim=1).min(dim=1).values)
         max_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).max(dim=1).values, input.flatten(start_dim=1).max(dim=1).values)
-        latent_loss = torch.nn.functional.mse_loss(latent, original_latent)
-        loss = recons_loss + min_recons_loss*0.25 + max_recons_loss*0.25 + latent_loss
-
-        return {'loss': loss, 'Reconstruction_Loss' : recons_loss.detach(), "min_recons_loss": min_recons_loss.detach(), "max_recons_loss": max_recons_loss.detach(), "latent_loss": latent_loss.detach()}
+        losses = {**losses, "Reconstruction_Loss": recons_loss.detach(), "min_recons_loss": min_recons_loss.detach(), "max_recons_loss": max_recons_loss.detach()}
+        loss = recons_loss + min_recons_loss*0.25 + max_recons_loss*0.25
+        if kwargs.get("n_kernels", False):
+            kernel_position_loss = torch.nn.functional.mse_loss(latent[:, 2*kwargs["n_kernels"]], original_latent[:, 2*kwargs["n_kernels"]])
+            losses = {**losses, "kernel_position_loss": kernel_position_loss.detach()}
+            loss += kernel_position_loss
+        # latent_loss = torch.nn.functional.mse_loss(latent, original_latent)
+        # losses = {**losses, "latent_loss": latent_loss.detach()}
+        # loss += latent_loss
+        return {"loss": loss, **losses}

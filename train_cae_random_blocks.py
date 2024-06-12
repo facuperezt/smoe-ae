@@ -140,7 +140,7 @@ def train_models(n_kernels: int,
                  input_is_img: bool,
                  mode: str = "disabled"):
     for model, model_name, lr in [
-            [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=False, negative_experts=False, downsample=False, batch_norm=batch_norm, device=device), "cae_kernels_inside", 1e-4],
+            [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=False, negative_experts=False, downsample=False, batch_norm=batch_norm, device=device), "cae_kernels_inside_jahsgdgjhafjhgkdsf", 1e-4],
             [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=True, negative_experts=False, downsample=False, batch_norm=batch_norm, device=device), "cae_kernels_outside", 1e-4],
             [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=False, negative_experts=True, downsample=False, batch_norm=batch_norm, device=device), "cae_negative_experts", 1e-4],
             [CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=True, negative_experts=True, downsample=False, batch_norm=batch_norm, device=device), "cae_kernels_outside_negative_experts", 1e-4],
@@ -178,7 +178,6 @@ def train_models(n_kernels: int,
             x = None
             for epoch in outter_pbar:
                 mean_epoch_loss = 0
-                mean_epoch_reconstr_loss = 0
                 with tqdm.tqdm(total=nr_batches, desc=f"Batch 0 - Loss: 0.0", disable=disable_tqdm) as pbar:
                     batch = 0
                     while batch < nr_batches:
@@ -204,9 +203,8 @@ def train_models(n_kernels: int,
                         # x_hat, x, mu, log_var, z = model(x, return_all=True, input_is_img=input_is_img)
                         # losses = model.loss_function(x_hat.squeeze(), x.squeeze(), mu, log_var, kld_weight=kld_loss, ignore_steering_space=kld_ignore_steering_space)
                         out = model(x, return_all=True, input_is_img=input_is_img)
-                        losses = model.loss_function(*out, x_batch)
+                        losses = model.loss_function(*out, x_batch, n_kernels=n_kernels)
                         loss = losses["loss"]
-                        mean_epoch_reconstr_loss += losses["Reconstruction_Loss"].item()
                         total_loss += loss
                         loss_present = True
                         if torch.cuda.memory_allocated() > torch.cuda.mem_get_info()[1]*0.85:
@@ -230,12 +228,19 @@ def train_models(n_kernels: int,
                 outter_pbar.set_description(f"Epoch Loss: {mean_epoch_loss:.2e} - LR: {optimizer.param_groups[0]['lr']:.2e}")
                 # Save image
                 with torch.no_grad():
-                    recon = model(valid_pic)[0].detach().cpu().numpy().squeeze()
+                    orig_blocks = model.img2block(valid_pic)[:, None].to(device)
+                    encoded = model.encoder.encode(orig_blocks)
+                    reconstructed_blocks = model.decoder(encoded)
+                    recon = model.block2img(reconstructed_blocks).detach().cpu().numpy().squeeze()
+                    inds = ((reconstructed_blocks[:, None] - orig_blocks)**2).flatten(start_dim=1).mean(dim=1).sort().indices
+                    best_recon = reconstructed_blocks[inds[-1], :].squeeze().detach().cpu().numpy()
+                    worst_recon = reconstructed_blocks[inds[0], :].squeeze().detach().cpu().numpy()
+                    # recon = model(valid_pic)[0].detach().cpu().numpy().squeeze()
                     if False:
                         plot_all(model, valid_pic)
                 
                 # save image in wandb
-                wandb.log({"reconstructed": [wandb.Image(recon*255)]}, commit=False)
+                wandb.log({"reconstructed": [wandb.Image(recon*255)], "best_recon": [wandb.Image(best_recon*255)], "worst_recon": [wandb.Image(worst_recon*255)]}, commit=False)
                 # save learning rate
                 wandb.log({"learning_rate": optimizer.param_groups[0]['lr']}, commit=False)
                 # save mean epoch loss
@@ -339,5 +344,5 @@ if __name__ == "__main__":
                  batch_size=batch_size,
                  load_final=load_final,
                  input_is_img=input_is_img,
-                 mode="disabled")
+                 mode="online")
             
