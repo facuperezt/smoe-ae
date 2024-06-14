@@ -24,14 +24,14 @@
     "bias": false,
     "residual": false,
     "order": "lbadr",
-    "activation": "relu",
+    "activation": "swish",
     "device": "cuda",
-    "model_name": "cae_kernelsinside",
+    "model_name": "CAE",
     "lr": 2e-4,
     "nr_epochs": 1000,
     "nr_batches": 20,
     "batch_size": 1500,
     "load_model": "",
     "input_is_img": false,
-    "wandb_mode": "online"
+    "wandb_mode": "disabled"
 }

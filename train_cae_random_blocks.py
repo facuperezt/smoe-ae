@@ -15,6 +15,8 @@ import wandb
 
 from utils import plot_block_with_kernels
 
+from datetime import datetime
+
 class EarlyStoppingScoreHistory:
     def __init__(self, memory_size=10):
         self.last_scores = []   
@@ -221,6 +223,8 @@ def train_model(n_kernels: int,
         model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth"))
     disable_tqdm = False
     nr_model_params = sum(p.numel() for p in model.parameters())
+    start_time = str(datetime.now()).split(".")[0].replace(" ", "@")
+    model_name = "_".join([model_name, start_time])
     run = wandb.init(mode=wandb_mode,
                     name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                     config={
@@ -239,6 +243,7 @@ def train_model(n_kernels: int,
                         "device": device,
                         "batch_size": batch_size,
                         "initial_lr": lr,
+                        "start_time": start_time,
                     }
                 )
     wandb.watch(model, log="gradients", log_freq=nr_epochs//20)
@@ -319,7 +324,7 @@ def train_model(n_kernels: int,
                     worst_recon = reconstructed_blocks[inds[-1], :].squeeze().detach().cpu()
                     orig_best_recon = orig_blocks[inds[0], :].squeeze().detach().cpu()
                     orig_worst_recon = orig_blocks[inds[-1], :].squeeze().detach().cpu()
-                    
+
                     best_fig = plt.figure()
                     plot_block_with_kernels(encoded[inds[-1]], best_recon, block_size=block_size)
                     plt.axis('off')
@@ -344,13 +349,13 @@ def train_model(n_kernels: int,
             wandb.log(losses, commit=True)
 
             # Early stopping
-            early_stopping(mean_epoch_loss, model, f"models/facu/checkpoints/{model_name}_random_blocks/{epoch}.pth")
+            early_stopping(mean_epoch_loss, model, f"models/facu/checkpoints/random_blocks/{model_name}/{epoch}.pth")
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
         
         wandb.save(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth")
-        torch.save(model.state_dict(), f"models/facu/checkpoints/{model_name}_random_blocks/final.pth")
+        torch.save(model.state_dict(), f"models/facu/checkpoints/random_blocks/{model_name}/final.pth")
         wandb.finish(0)
     except KeyboardInterrupt:
         print("Training interrupted")
