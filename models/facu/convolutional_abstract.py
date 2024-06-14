@@ -55,9 +55,25 @@ class CAE_Abstract(torch.nn.Module):
         losses = {**losses, "Reconstruction_Loss": recons_loss.detach(), "min_recons_loss": min_recons_loss.detach(), "max_recons_loss": max_recons_loss.detach()}
         loss = recons_loss + min_recons_loss*0.25 + max_recons_loss*0.25
         if kwargs.get("n_kernels", False):
-            kernel_position_loss = torch.nn.functional.mse_loss(latent[:, 2*kwargs["n_kernels"]], original_latent[:, 2*kwargs["n_kernels"]])
+            n_kernels = kwargs["n_kernels"]
+            xy_orig = original_latent[:, :2*n_kernels]
+            xy_recon = latent[:, :2*n_kernels]
+
+            distances = torch.pow(torch.pow(xy_orig - xy_recon, 2).sum(dim=1), 0.5)
+
+            nu_orig = original_latent[:, 2*n_kernels:3*n_kernels]
+            nu_recon = latent[:, 2*n_kernels:3*n_kernels]
+
+
+
+            kernel_position_loss = distances.mean() # torch.nn.functional.mse_loss(latent[:, 2*kwargs["n_kernels"]:], original_latent[:, 2*kwargs["n_kernels"]:])
             losses = {**losses, "kernel_position_loss": kernel_position_loss.detach()}
-            loss += kernel_position_loss
+            loss += kernel_position_loss*0.1
+
+            kernel_expert_loss = torch.nn.functional.mse_loss(nu_recon, nu_orig)
+            losses = {**losses, "kernel_expert_loss": kernel_expert_loss.detach()}
+            loss += kernel_expert_loss*0.05
+
         # latent_loss = torch.nn.functional.mse_loss(latent, original_latent)
         # losses = {**losses, "latent_loss": latent_loss.detach()}
         # loss += latent_loss

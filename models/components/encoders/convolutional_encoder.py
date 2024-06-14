@@ -1,5 +1,6 @@
 from functools import partial
-from typing import List, Literal, Tuple, Union
+from logging import warning
+from typing import Dict, List, Literal, Tuple, Union
 import torch
 
 from models.components.conv_blocks.conv_blocks import *
@@ -65,6 +66,9 @@ class CAE(torch.nn.Module):
                 min_block_size: int = 2,
                 block_size_reduction: int = 2,
             ) -> torch.nn.Sequential:
+        if int(block_size_reduction) != block_size_reduction:
+            warning(f"Block size reduction got corrected from {block_size_reduction} to {int(block_size_reduction)}")
+            block_size_reduction = int(block_size_reduction)
         if curr_block_size is None:
             curr_block_size = self._block_size
         conv_modules = []
@@ -76,7 +80,7 @@ class CAE(torch.nn.Module):
                     in_channels != 1
                 ):
                 curr_block_size = curr_block_size // block_size_reduction
-                _stride = 2
+                _stride = block_size_reduction
             else:
                 _stride = 1
             layer = conv_block(in_channels=in_channels, out_channels=h_dim, stride=_stride)
@@ -102,16 +106,17 @@ class CAE(torch.nn.Module):
         :param input: (Tensor) Input tensor to encoder [N x C x H x W]
         :return: (Tensor) List of latent codes
         """
-        # result = self.encoder(input)
         result = input
         result = self.encoder(result)
+        # for layer in self.encoder:
+        #     result = layer(result)
         return self.fc(result)
     
     def forward(self, x: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if len(x.shape) == 3:
             x = x[:, None, :, :]
         x = self.encode(x)
-        return x
+        return self.output_nonlinearities(x)
 
 class KernelsInsideCAE(CAE):
     def __init__(self,
@@ -266,7 +271,7 @@ class GeneralCAE(CAE):
             hidden_dims: List = None,
             kernels_outside: bool = False,
             negative_experts: bool = False,
-            downsample: bool = False,
+            downsample: Dict = None,
             batch_norm: bool = False,
             bias: bool = True,
             residual: bool = True,
@@ -275,15 +280,16 @@ class GeneralCAE(CAE):
             activation: Union[torch.nn.Module, Literal["relu", "swish", "lrelu"]] = "relu",
             **kwargs
         ) -> None:
-
+        if downsample is None:
+            downsample = {"active": False}
         ### Convolutional layers ###
         conv_block = partial(GeneralConvBlock, batch_norm=batch_norm, bias=bias, residual=residual, dropout=dropout, order=order, activation=activation)
-        if downsample:
+        if downsample["active"]:
             self._build_conv_layers = partial(
                 self._build_conv_layers,
-                downsample=downsample,
-                min_block_size=kwargs.get("min_block_size", 2),
-                block_size_reduction=kwargs.get("block_size_reduction", 2)
+                downsample=downsample["active"],
+                min_block_size=downsample.get("min_block_size", 2),
+                block_size_reduction=downsample.get("block_size_reduction", 2)
             )
         super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
         

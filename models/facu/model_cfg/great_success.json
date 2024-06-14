@@ -1,0 +1,37 @@
+{
+    "n_kernels": 4,
+    "block_size": 16,
+    "img_size": 512,
+    "hidden_dims": [
+        16,
+        16,
+        16,
+        16,
+        32,
+        64,
+        128,
+        256,
+        512
+    ],
+    "kernels_outside": false,
+    "negative_experts": false,
+    "downsample": {
+        "active": true,
+        "min_block_size": 2,
+        "block_size_reduction": 2
+    },
+    "batch_norm": true,
+    "bias": false,
+    "residual": false,
+    "order": "lbadr",
+    "activation": "relu",
+    "device": "cuda",
+    "model_name": "cae_kernelsinside",
+    "lr": 2e-4,
+    "nr_epochs": 1000,
+    "nr_batches": 20,
+    "batch_size": 1500,
+    "load_model": "",
+    "input_is_img": false,
+    "wandb_mode": "online"
+}

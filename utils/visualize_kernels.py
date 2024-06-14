@@ -11,6 +11,7 @@ __all__ = [
     "plot_kernels",
     "plot_kernel_centers",
     "shade_kernel_areas",
+    "plot_block_with_kernels"
 ]
 
 # Funtion that upsamples image by factor of n

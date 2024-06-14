@@ -1,0 +1,35 @@
+{
+    "n_kernels": 4,
+    "block_size": 16,
+    "img_size": 512,
+    "hidden_dims": [
+        2,
+        4,
+        8,
+        16,
+        32,
+        64,
+        128
+    ],
+    "kernels_outside": false,
+    "negative_experts": false,
+    "downsample": {
+        "active": false,
+        "min_block_size": 2,
+        "block_size_reduction": 2
+    },
+    "batch_norm": false,
+    "bias": true,
+    "residual": false,
+    "order": "lbadr",
+    "activation": "relu",
+    "device": "cuda",
+    "model_name": "default",
+    "lr": 0.0001,
+    "nr_epochs": 100,
+    "nr_batches": 20,
+    "batch_size": 1000,
+    "load_model": "",
+    "input_is_img": false,
+    "wandb_mode": "disabled"
+}

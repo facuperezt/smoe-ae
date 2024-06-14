@@ -57,8 +57,10 @@ class DataLoader:
         return q
     
     def get_m_blocks_with_n_kernels(self, m: int, n: int, kernels_outside: bool = False, negative_experts: bool = False,
-                                    vmin: float = -5, vmax: float = 5, include_zero: bool = True, device: torch.device = torch.device("cpu")):
-        return get_m_samples(m, n, kernels_outside=kernels_outside, negative_experts=negative_experts, vmin=vmin, vmax=vmax, include_zero=include_zero, device=device)
+                                    vmin: float = -5, vmax: float = 5, include_zero: bool = True, device: torch.device = torch.device("cpu"),
+                                    predicted_locations = None):
+        out = get_m_samples(m, n, kernels_outside=kernels_outside, negative_experts=negative_experts, vmin=vmin, vmax=vmax, include_zero=include_zero, device=device)
+        return out
 
     def get(self, data: str = "train", limit_to: int = None, batch_size: int = 1):
         if data == "train":
