@@ -204,6 +204,7 @@ def train_model(n_kernels: int,
                 batch_norm: bool,
                 bias: bool,
                 residual: bool,
+                dropout: float,
                 order: str,
                 activation: Union[str, torch.nn.Module], 
                 device: torch.device = "cuda",
@@ -217,14 +218,15 @@ def train_model(n_kernels: int,
                 wandb_mode: str = "disabled"):
     model: CAE_Codec = CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims,
                                  kernels_outside=kernels_outside, negative_experts=negative_experts, downsample=downsample,
-                                 batch_norm=batch_norm, bias=bias, residual=residual, order=order, activation=activation,
-                                 device=device)
-    if load_model:
-        model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth"))
+                                 batch_norm=batch_norm, bias=bias, residual=residual, dropout=dropout, order=order,
+                                 activation=activation, device=device)
     disable_tqdm = False
     nr_model_params = sum(p.numel() for p in model.parameters())
-    start_time = str(datetime.now()).split(".")[0].replace(" ", "@")
+    start_time = str(datetime.now()).split(".")[0].replace(":", ";")
     model_name = "_".join([model_name, start_time])
+    model_path = f"models/facu/checkpoints/random_blocks/{model_name}"
+    if load_model:
+        model.load_state_dict(torch.load(load_model))
     run = wandb.init(mode=wandb_mode,
                     name=f"{model_name}", group="vae", project=f"{hidden_dims}",
                     config={
@@ -253,8 +255,7 @@ def train_model(n_kernels: int,
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=50, cooldown=20, verbose=False)
     early_stopping = EarlyStopping(patience=100, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
 
-    os.makedirs(f"models/facu/checkpoints/{model_name}_random_blocks/", exist_ok=True)
-    os.makedirs(f"models/facu/images2/{model_name}_random_blocks/", exist_ok=True)
+    os.makedirs(f"{model_path}", exist_ok=True)
 
     train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
     valid_pic = train_loader.get_valid_pic()
@@ -349,13 +350,13 @@ def train_model(n_kernels: int,
             wandb.log(losses, commit=True)
 
             # Early stopping
-            early_stopping(mean_epoch_loss, model, f"models/facu/checkpoints/random_blocks/{model_name}/{epoch}.pth")
+            early_stopping(mean_epoch_loss, model, f"{model_path}/{epoch}.pth")
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
         
-        wandb.save(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth")
-        torch.save(model.state_dict(), f"models/facu/checkpoints/random_blocks/{model_name}/final.pth")
+        torch.save(model.state_dict(), f"{model_path}/final.pth")
+        wandb.save(f"{model_path}/final.pth")
         wandb.finish(0)
     except KeyboardInterrupt:
         print("Training interrupted")
