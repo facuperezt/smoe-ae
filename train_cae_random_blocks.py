@@ -253,7 +253,7 @@ def train_model(n_kernels: int,
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=50, cooldown=20, verbose=False)
-    early_stopping = EarlyStopping(patience=100, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
+    early_stopping = EarlyStopping(patience=250, verbose=True, delta=1e-4, memory_size=20, trace_func=print)
 
     os.makedirs(f"{model_path}", exist_ok=True)
 

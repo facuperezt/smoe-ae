@@ -368,11 +368,11 @@ kld_params_list = [
 ]
 
 train_loader = DataLoader("professional_photos", img_size=img_size, block_size=block_size)
-
+#%%
 for model, model_name, lr in [
     (CAE_Codec(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, kernels_outside=kernels_outside, negative_experts=negative_experts, batch_norm=batch_norm, device=device,
             bias=bias, downsample=downsample, residual=residual, dropout=dropout, order=order, activation=activation), "cae_kernels_inside", 1e-3),
-    (VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=True, device=device, conv_args = {"bias": False}), "vae_kernels_inside", 1e-3),
+    # (VAE_KernelsInside(n_kernels=n_kernels, block_size=block_size, img_size=img_size, hidden_dims=hidden_dims, batch_norm=True, device=device, conv_args = {"bias": False}), "vae_kernels_inside", 1e-3),
 ]:
     if load_final:
         model.load_state_dict(torch.load(f"models/facu/checkpoints/{model_name}_random_blocks/final.pth"))

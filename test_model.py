@@ -192,4 +192,3 @@ if __name__ == "__main__":
     with Gradient(model=_model, composite=composite) as attributor:
         _, y_rel = attributor(x.cpu(), np.zeros_like(y.cpu().detach()))
     # %%
-
