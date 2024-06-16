@@ -25,7 +25,7 @@
     "residual": false,
     "dropout": 0.1,
     "order": "lbadr",
-    "activation": "swish",
+    "activation": "lrelu",
     "device": "cuda",
     "model_name": "CAE",
     "lr": 2e-4,
