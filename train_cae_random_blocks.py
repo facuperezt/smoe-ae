@@ -266,7 +266,7 @@ def train_model(n_kernels: int,
     wandb.log({"original": [wandb.Image(valid_pic.numpy()*255)], "nr_params": nr_model_params}, step=0, commit=True)
     valid_pic = valid_pic.to(device)
 
-    _debug_var = True
+    _debug_var = False
     try:
         outter_pbar = tqdm.tqdm(range(nr_epochs), desc=f"Epoch Loss: 0.0 - LR: {optimizer.param_groups[0]['lr']:.2e}", disable=disable_tqdm)
         x = None
