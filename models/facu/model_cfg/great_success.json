@@ -11,7 +11,8 @@
         64,
         128,
         256,
-        512
+        512,
+        1024
     ],
     "kernels_outside": false,
     "negative_experts": false,
@@ -20,12 +21,30 @@
         "min_block_size": 2,
         "block_size_reduction": 2
     },
-    "batch_norm": true,
-    "bias": false,
-    "residual": false,
-    "dropout": 0.1,
-    "order": "lbadr",
-    "activation": "lrelu",
+    "batch_norm": {
+        "conv": false,
+        "lin": true
+    },
+    "bias": {
+        "conv": true,
+        "lin": false
+    },
+    "residual": {
+        "conv": false,
+        "lin": false
+    },
+    "dropout": {
+        "conv": 0.0,
+        "lin": 0.1
+    },
+    "order": {
+        "conv": "lbadr",
+        "lin": "lbadr"
+    },
+    "activation": {
+        "conv": "swish",
+        "lin": "relu"
+    },
     "device": "cuda",
     "model_name": "CAE",
     "lr": 2e-4,

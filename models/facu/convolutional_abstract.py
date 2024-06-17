@@ -3,7 +3,11 @@ import torch
 from typing import Optional, Tuple, Dict
 from utils import Img2Block, Block2Img
 
-from torch_linear_assignment import batch_linear_assignment
+try:
+    from torch_linear_assignment import batch_linear_assignment
+    _import_failed = False
+except ImportError:
+    _import_failed = True
 
 class CAE_Abstract(torch.nn.Module):
     def __init__(self, n_kernels: int, block_size: int, img_size: int, device: str = "cuda"):
@@ -75,21 +79,26 @@ class CAE_Abstract(torch.nn.Module):
         losses = {**losses, "Reconstruction_Loss": recons_loss.detach(), "min_recons_loss": min_recons_loss.detach(), "max_recons_loss": max_recons_loss.detach()}
         loss = recons_loss + min_recons_loss*0.25 + max_recons_loss*0.25
         if kwargs.get("n_kernels", False):
-            n_kernels = kwargs["n_kernels"]
-            xy_orig = original_latent[:, :2*n_kernels]
-            xy_orig = xy_orig.T.reshape(2, n_kernels, -1).transpose(0, -1)
-            xy_recon = latent[:, :2*n_kernels]
-            xy_recon = xy_recon.T.reshape(2, n_kernels, -1).transpose(0, -1)
-            xy_orig, xy_recon, orig_inds = self.best_match(xy_orig, xy_recon)
-            distances = torch.pow(xy_orig - xy_recon, 2).sum(dim=-1)
-            kernel_position_loss = distances.mean() # torch.nn.functional.mse_loss(latent[:, 2*kwargs["n_kernels"]:], original_latent[:, 2*kwargs["n_kernels"]:])
-            losses = {**losses, "kernel_position_loss": kernel_position_loss.detach()}
-            loss += kernel_position_loss*0.2
+            if not _import_failed:
+                n_kernels = kwargs["n_kernels"]
+                xy_orig = original_latent[:, :2*n_kernels]
+                xy_orig = xy_orig.T.reshape(2, n_kernels, -1).transpose(0, -1)
+                xy_recon = latent[:, :2*n_kernels]
+                xy_recon = xy_recon.T.reshape(2, n_kernels, -1).transpose(0, -1)
+                xy_orig, xy_recon, orig_inds = self.best_match(xy_orig, xy_recon)
+                distances = torch.pow(xy_orig - xy_recon, 2).sum(dim=-1)
+                kernel_position_loss = distances.mean() # torch.nn.functional.mse_loss(latent[:, 2*kwargs["n_kernels"]:], original_latent[:, 2*kwargs["n_kernels"]:])
+                losses = {**losses, "kernel_position_loss": kernel_position_loss.detach()}
+                loss += kernel_position_loss*0.2
 
             # minimize the total expert value, because we don't know the order of the experts
             nu_orig = original_latent[:, 2*n_kernels:3*n_kernels]
             nu_recon = latent[:, 2*n_kernels:3*n_kernels]
-            nu_orig = nu_orig[torch.arange(nu_orig.size(0))[:, None], orig_inds]
+            if not _import_failed:        
+                nu_orig = nu_orig[torch.arange(nu_orig.size(0))[:, None], orig_inds]
+            else:
+                nu_orig = nu_orig.sum(dim=1)
+                nu_recon = nu_recon.sum(dim=1)
             kernel_expert_loss = torch.nn.functional.mse_loss(nu_recon, nu_orig)
             losses = {**losses, "kernel_expert_loss": kernel_expert_loss.detach()}
             loss += kernel_expert_loss*0.2

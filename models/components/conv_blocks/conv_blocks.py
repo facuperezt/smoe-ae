@@ -1,3 +1,4 @@
+from logging import warning
 from typing import Literal, Tuple, Union
 import torch
 
@@ -242,6 +243,10 @@ class GeneralConvBlock(torch.nn.Module):
         self.activation = activation
         if not residual:
             order = order.replace("r", "")
+        if residual and in_channels != out_channels:
+            self.downsample_residual = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)
+        else:
+            self.downsample_residual = torch.nn.Identity()
         self.dropout = torch.nn.Dropout(dropout)
         self.order = order
         self._apply_order_dict = {
@@ -255,6 +260,7 @@ class GeneralConvBlock(torch.nn.Module):
         _x = x
         for order in self.order:
             if order == "r":
+                _x = self.downsample_residual(_x)
                 x = x + _x
             else:
                 x = self._apply_order_dict[order](x)
@@ -307,6 +313,9 @@ class GeneralLinearBlock(torch.nn.Module):
             self.bn = torch.nn.Identity()
         self.dropout = torch.nn.Dropout(dropout)
         self.activation = activation
+        if residual and in_features != out_features:
+            warning("Residual connection is not possible with different input and output features. Disabling residual connection.")
+            residual = False
         if not residual:
             order = order.replace("r", "")
         self.order = order

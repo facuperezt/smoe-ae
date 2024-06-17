@@ -24,6 +24,7 @@ class CAE(torch.nn.Module):
                  block_size: int = 16,
                  hidden_dims: List = None,
                  conv_block: torch.nn.Module = ConvBlock,
+                 lin_block: torch.nn.Module = LinearBlock,
                  **kwargs) -> None:
         super().__init__()
 
@@ -41,7 +42,7 @@ class CAE(torch.nn.Module):
         else:
             self.conv, in_channels, block_size = ret
             self._block_size = block_size
-        self.lin, in_channels = self._build_lin_layers(in_channels*block_size**2, hidden_dims, LinearBlock)
+        self.lin, in_channels = self._build_lin_layers(in_channels*block_size**2, hidden_dims, lin_block)
 
         self.encoder = torch.nn.Sequential(
             self.conv,
@@ -107,9 +108,9 @@ class CAE(torch.nn.Module):
         :return: (Tensor) List of latent codes
         """
         result = input
-        result = self.encoder(result)
-        # for layer in self.encoder:
-        #     result = layer(result)
+        # result = self.encoder(result)
+        for layer in self.encoder:
+            result = layer(result)
         return self.fc(result)
     
     def forward(self, x: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -272,9 +273,9 @@ class GeneralCAE(CAE):
             kernels_outside: bool = False,
             negative_experts: bool = False,
             downsample: Dict = None,
-            batch_norm: bool = False,
-            bias: bool = True,
-            residual: bool = True,
+            batch_norm: Dict[str, bool] = None,
+            bias: Dict[str, bool] = None,
+            residual: Dict[str, bool] = None,
             dropout: float = 0.0,
             order: str = "lbad",
             activation: Union[torch.nn.Module, Literal["relu", "swish", "lrelu"]] = "relu",
@@ -282,8 +283,15 @@ class GeneralCAE(CAE):
         ) -> None:
         if downsample is None:
             downsample = {"active": False}
+        if batch_norm is None:
+            batch_norm = {"conv": False, "lin": False}
+        if bias is None:
+            bias = {"conv": True, "lin": True}
+        if residual is None:
+            residual = {"conv": False, "lin": False}
         ### Convolutional layers ###
-        conv_block = partial(GeneralConvBlock, batch_norm=batch_norm, bias=bias, residual=residual, dropout=dropout, order=order, activation=activation)
+        conv_block = partial(GeneralConvBlock, batch_norm=batch_norm["conv"], bias=bias["conv"], residual=residual["conv"], dropout=dropout["conv"], order=order["conv"], activation=activation["conv"])
+        lin_block = partial(GeneralLinearBlock, batch_norm=batch_norm["lin"], bias=bias["lin"], residual=residual["lin"], dropout=dropout["lin"], order=order["lin"], activation=activation["lin"])
         if downsample["active"]:
             self._build_conv_layers = partial(
                 self._build_conv_layers,
@@ -291,7 +299,7 @@ class GeneralCAE(CAE):
                 min_block_size=downsample.get("min_block_size", 2),
                 block_size_reduction=downsample.get("block_size_reduction", 2)
             )
-        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, **kwargs)
+        super().__init__(in_channels, n_kernels, block_size, hidden_dims, conv_block, lin_block, **kwargs)
         
         ### Output non-linearities ###
         if kernels_outside:

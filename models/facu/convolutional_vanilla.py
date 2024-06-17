@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 import torch
 
 from .convolutional_abstract import CAE_Abstract
@@ -81,7 +81,7 @@ class CAE_Codec(CAE):
         downsample: bool = False,
         batch_norm: bool = False,
         bias: bool = True,
-        residual: bool = False,
+        residual: Dict[str, bool] = False,
         dropout: float = 0.0,
         order: str = "lbadr",
         activation: Union[torch.nn.Module, Literal["relu", "swish", "lrelu"]] = "relu",
