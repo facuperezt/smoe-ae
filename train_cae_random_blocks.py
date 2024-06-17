@@ -180,6 +180,9 @@ def plot_grad_flow(named_parameters):
     layers = []
     for n, p in named_parameters:
         if(p.requires_grad) and ("bias" not in n):
+            if p.grad is None:
+                print(f"None gradient for {n}")
+                continue
             layers.append(n)
             ave_grads.append(p.grad.abs().mean().cpu())
     fig = plt.figure()
@@ -240,6 +243,7 @@ def train_model(n_kernels: int,
                         "batch_norm": batch_norm,
                         "bias": bias,
                         "residual": residual,
+                        "dropout": dropout,
                         "order": order,
                         "activation": activation,
                         "device": device,
@@ -262,7 +266,7 @@ def train_model(n_kernels: int,
     wandb.log({"original": [wandb.Image(valid_pic.numpy()*255)], "nr_params": nr_model_params}, step=0, commit=True)
     valid_pic = valid_pic.to(device)
 
-    _debug_var = False
+    _debug_var = True
     try:
         outter_pbar = tqdm.tqdm(range(nr_epochs), desc=f"Epoch Loss: 0.0 - LR: {optimizer.param_groups[0]['lr']:.2e}", disable=disable_tqdm)
         x = None
@@ -273,18 +277,18 @@ def train_model(n_kernels: int,
                 while batch < nr_batches:
                     x_batch = train_loader.get_m_blocks_with_n_kernels(batch_size, n_kernels, kernels_outside=kernels_outside, 
                                                                        negative_experts=negative_experts, device=device)
-                    if x is not None:
-                        _prev = out[2][:, :2*n_kernels]
-                        tmp = torch.cdist(x_batch[:, :2*n_kernels], _prev)
-                        tmp = tmp.mean(dim=-1).sort().indices
-                        sample_inds = torch.multinomial(tmp[:len(tmp)//2].float(), x_batch.size(0), replacement=True)
-                        _x_batch = x_batch[sample_inds, :]
-                        if _debug_var:
-                            plt.scatter(*out[2][:, :2].T.detach().cpu())
-                            plt.scatter(*x_batch[:, :2].T.cpu())
-                            plt.scatter(*_x_batch[:, :2].T.cpu())
-                            plt.show()
-                        x_batch = _x_batch
+                    # if x is not None:
+                    #     _prev = out[2][:, :2*n_kernels]
+                    #     tmp = torch.cdist(x_batch[:, :2*n_kernels], _prev)
+                    #     tmp = tmp.mean(dim=-1).sort().indices
+                    #     sample_inds = torch.multinomial(tmp[:len(tmp)//2].float(), x_batch.size(0), replacement=True)
+                    #     _x_batch = x_batch[sample_inds, :]
+                    #     if _debug_var:
+                    #         plt.scatter(*out[2][:, :2].T.detach().cpu())
+                    #         plt.scatter(*x_batch[:, :2].T.cpu())
+                    #         plt.scatter(*_x_batch[:, :2].T.cpu())
+                    #         plt.show()
+                    #     x_batch = _x_batch
                     optimizer.zero_grad()
                     total_loss = torch.tensor(0.0, device=device)
                     loss_present = False
