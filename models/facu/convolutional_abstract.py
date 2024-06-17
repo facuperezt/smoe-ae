@@ -79,8 +79,8 @@ class CAE_Abstract(torch.nn.Module):
         losses = {**losses, "Reconstruction_Loss": recons_loss.detach(), "min_recons_loss": min_recons_loss.detach(), "max_recons_loss": max_recons_loss.detach()}
         loss = recons_loss + min_recons_loss*0.25 + max_recons_loss*0.25
         if kwargs.get("n_kernels", False):
+            n_kernels = kwargs["n_kernels"]
             if not _import_failed:
-                n_kernels = kwargs["n_kernels"]
                 xy_orig = original_latent[:, :2*n_kernels]
                 xy_orig = xy_orig.T.reshape(2, n_kernels, -1).transpose(0, -1)
                 xy_recon = latent[:, :2*n_kernels]
