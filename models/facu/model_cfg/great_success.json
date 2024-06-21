@@ -35,7 +35,7 @@
     },
     "dropout": {
         "conv": 0.0,
-        "lin": 0.1
+        "lin": 0.5
     },
     "order": {
         "conv": "lbadr",
