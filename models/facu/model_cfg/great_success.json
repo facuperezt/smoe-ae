@@ -22,11 +22,11 @@
         "block_size_reduction": 2
     },
     "batch_norm": {
-        "conv": false,
+        "conv": true,
         "lin": true
     },
     "bias": {
-        "conv": true,
+        "conv": false,
         "lin": false
     },
     "residual": {
@@ -34,12 +34,12 @@
         "lin": false
     },
     "dropout": {
-        "conv": 0.0,
+        "conv": 0.1,
         "lin": 0.1
     },
     "order": {
         "conv": "lbadr",
-        "lin": "lbadr"
+        "lin": "labdr"
     },
     "activation": {
         "conv": "swish",
@@ -47,11 +47,14 @@
     },
     "device": "cuda",
     "model_name": "CAE",
-    "lr": 2e-4,
+    "lr": 1e-5,
     "nr_epochs": 10000,
-    "nr_batches": 25,
-    "batch_size": 1500,
+    "nr_batches": 5,
+
+    "batch_size": 6,
+    "input_is_img": true,
+    "data_mode": "dataset",
+    "load_model": "models/facu/checkpoints/random_blocks/CAE_2024-06-17 20;22;43/final.pth",
     "load_model": "",
-    "input_is_img": false,
-    "wandb_mode": "online"
+    "wandb_mode": "disabled"
 }

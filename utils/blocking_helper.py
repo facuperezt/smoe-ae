@@ -148,10 +148,14 @@ def sliding_window_torch(a: torch.Tensor, ws, ss=None, flatten=True):
     return strided.squeeze()
 
 class BlockImgBlock(torch.nn.Module):
-    def __init__(self, block_size: int, img_size: int, require_grad: bool = False):
+    # Variable to keep track of the operations
+    _last_unfolded_shape = None
+
+    def __init__(self, block_size: int, img_size: int, n_channels: int = 1, require_grad: bool = False):
         super().__init__()
         self.block_size = block_size
         self.img_size = img_size
+        self.n_channels = n_channels
         self.require_grad = require_grad
 
     def img_to_blocks(self, img_input: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
@@ -170,13 +174,62 @@ class BlockImgBlock(torch.nn.Module):
         img = self.blocks_to_img(blocked_output).detach().numpy()
         plt.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
 
+    def unfold_tensor (self, x, step_c, step_h, step_w):
+        kc, kh, kw = step_c, step_h, step_w  # kernel size
+        dc, dh, dw = step_c, step_h, step_w  # stride
+        
+        nc, remainder = np.divmod(x.size(1), kc)
+        nc += bool(remainder)
+        
+        nh, remainder = np.divmod(x.size(2), kh)
+        nh += bool(remainder)
+        
+        nw, remainder = np.divmod(x.size(3), kw)
+        nw += bool(remainder)    
+        
+        pad_c, pad_h, pad_w = nc*kc - x.size(1),  nh*kh - x.size(2), nw*kw - x.size(3)
+        x = torch.nn.functional.pad(x, ( 0, pad_h, 0, pad_w, 0, pad_c))
+        patches = x.unfold(1, kc, dc).unfold(2, kh, dh).unfold(3, kw, dw)
+        unfold_shape = patches.size()
+        patches = patches.reshape(unfold_shape[0]*unfold_shape[1]*unfold_shape[2]*unfold_shape[3], unfold_shape[4], unfold_shape[5], unfold_shape[6]).squeeze()
+        BlockImgBlock._last_unfolded_shape = unfold_shape
+        return patches
+
+    def fold_tensor (self, x, shape_x: torch.Tensor = None):
+        if shape_x is None:
+            shape_x = BlockImgBlock._last_unfolded_shape
+        x = x.reshape(shape_x[0], shape_x[1], shape_x[2], shape_x[3], shape_x[4], shape_x[5], shape_x[6])
+        x = x.permute(0, 1, 4, 2, 5, 3, 6).contiguous()
+        #Fold
+        output_c = shape_x[1] * shape_x[4]
+        output_h = shape_x[2] * shape_x[5]
+        output_w = shape_x[3] * shape_x[6]
+        x = x.view(-1, output_c, output_h, output_w)
+        return x
+
 class Img2Block(BlockImgBlock):
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward_old(self, x: torch.Tensor) -> torch.Tensor:
         if 2 <= x.ndim <= 3:
             return self.img_to_blocks(x)
         elif x.ndim == 4:
             return torch.stack([self.img_to_blocks(x[i]) for i in range(x.shape[0])])
+        
+    def forward_new(self, x: torch.Tensor) -> torch.Tensor:
+        return self.unfold_tensor(x, self.n_channels, self.block_size, self.block_size)
     
+    def forward(self, x: torch.Tensor, use_old: bool = False) -> torch.Tensor:
+        if use_old:
+            return self.forward_old(x)
+        return self.forward_new(x)
+
 class Block2Img(BlockImgBlock):
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward_old(self, x: torch.Tensor) -> torch.Tensor:
         return self.blocks_to_img(x)
+    
+    def forward_new(self, x: torch.Tensor) -> torch.Tensor:
+        return self.fold_tensor(x)
+    
+    def forward(self, x: torch.Tensor, use_old: bool = False) -> torch.Tensor:
+        if use_old:
+            return self.forward_old(x)
+        return self.forward_new(x)

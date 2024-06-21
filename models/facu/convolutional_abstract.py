@@ -14,11 +14,29 @@ class CAE_Abstract(torch.nn.Module):
         super().__init__()
         self.device = device
         self.n_kernels = n_kernels
+        self.block_size = block_size
         self.img2block = Img2Block(block_size, img_size)
         self.block2img = Block2Img(block_size, img_size)
         self.kld_loss = torch.nn.KLDivLoss(reduction='batchmean')
         self._encoder = None
         self._decoder = None
+        
+
+        # scuffed thing to make the corners weigh more on the loss
+        width = block_size
+        sigma = 1
+        distance = torch.arange(
+            -(width // 2), width // 2, dtype=torch.float,
+        )
+        gaussian = torch.exp(
+            -(distance[:, None] ** 2 + distance[None] ** 2) / (2 * sigma ** 2)
+        )
+        gaussian /= gaussian.sum()
+        gaussian -= gaussian.max()
+        gaussian = -gaussian
+        gaussian /= (gaussian.max())
+        gaussian *= 2
+        self.multiplier = gaussian.to(self.device)
 
     def forward(self, _x: torch.Tensor, return_all: bool = False, input_is_img: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         x = _x.clone()
@@ -73,11 +91,7 @@ class CAE_Abstract(torch.nn.Module):
 
         losses = {}
         loss = 0
-        recons_loss = (recons - input).abs().mean()
-        min_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).min(dim=1).values, input.flatten(start_dim=1).min(dim=1).values)
-        max_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).max(dim=1).values, input.flatten(start_dim=1).max(dim=1).values)
-        losses = {**losses, "Reconstruction_Loss": recons_loss.detach(), "min_recons_loss": min_recons_loss.detach(), "max_recons_loss": max_recons_loss.detach()}
-        loss = recons_loss + min_recons_loss*0.25 + max_recons_loss*0.25
+
         if kwargs.get("n_kernels", False):
             n_kernels = kwargs["n_kernels"]
             if not _import_failed:
@@ -103,6 +117,15 @@ class CAE_Abstract(torch.nn.Module):
             losses = {**losses, "kernel_expert_loss": kernel_expert_loss.detach()}
             loss += kernel_expert_loss*0.2
 
+        recons_loss = (recons - input).abs().mean()
+        try:
+            recons_loss *= self.multiplier
+        except RuntimeError:
+            pass
+        min_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).min(dim=1).values, input.flatten(start_dim=1).min(dim=1).values)
+        max_recons_loss = torch.nn.functional.mse_loss(recons.flatten(start_dim=1).max(dim=1).values, input.flatten(start_dim=1).max(dim=1).values)
+        losses = {**losses, "Reconstruction_Loss": recons_loss.detach(), "min_recons_loss": min_recons_loss.detach(), "max_recons_loss": max_recons_loss.detach()}
+        loss = recons_loss + min_recons_loss*0.25 + max_recons_loss*0.25
         # latent_loss = torch.nn.functional.mse_loss(latent, original_latent)
         # losses = {**losses, "latent_loss": latent_loss.detach()}
         # loss += latent_loss
