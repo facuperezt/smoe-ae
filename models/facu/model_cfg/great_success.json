@@ -46,7 +46,7 @@
         "lin": "relu"
     },
     "device": "cuda",
-    "model_name": "Single block CAE",
+    "model_name": "Two kernels CAE",
     "lr": 1e-4,
     "nr_epochs": 10000,
     "nr_batches": 50,
