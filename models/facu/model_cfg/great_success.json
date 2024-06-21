@@ -1,5 +1,5 @@
 {
-    "n_kernels": 4,
+    "n_kernels": 2,
     "block_size": 16,
     "img_size": 512,
     "hidden_dims": [
@@ -34,7 +34,7 @@
         "lin": false
     },
     "dropout": {
-        "conv": 0.1,
+        "conv": 0.0,
         "lin": 0.1
     },
     "order": {
@@ -46,15 +46,15 @@
         "lin": "relu"
     },
     "device": "cuda",
-    "model_name": "CAE",
-    "lr": 1e-5,
+    "model_name": "Single block CAE",
+    "lr": 1e-4,
     "nr_epochs": 10000,
-    "nr_batches": 5,
+    "nr_batches": 50,
 
-    "batch_size": 6,
-    "input_is_img": true,
-    "data_mode": "dataset",
+    "batch_size": 1500,
+    "input_is_img": false,
+    "data_mode": "synthetic",
     "load_model": "models/facu/checkpoints/random_blocks/CAE_2024-06-17 20;22;43/final.pth",
     "load_model": "",
-    "wandb_mode": "disabled"
+    "wandb_mode": "online"
 }

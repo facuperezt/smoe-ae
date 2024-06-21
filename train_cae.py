@@ -2,7 +2,7 @@
 import json
 import os
 import time
-from typing import Dict, List, Literal, Union
+from typing import Dict, List, Literal, Optional, Union
 from matplotlib import pyplot as plt
 import torch
 from PIL import Image
@@ -107,7 +107,7 @@ def train_model(n_kernels: int,
             with tqdm.tqdm(total=nr_batches, desc=f"Batch 0 - Loss: 0.0", disable=disable_tqdm) as pbar:
                 batch = 0
                 while batch < nr_batches:
-                    x_batch = train_loader.get(include_zero=True)
+                    x_batch = train_loader.get(m=batch_size, n=n_kernels, include_zero=True)
                     # if x is not None:
                     #     _prev = out[2][:, :2*n_kernels]
                     #     tmp = torch.cdist(x_batch[:, :2*n_kernels], _prev)
@@ -125,6 +125,7 @@ def train_model(n_kernels: int,
                         x = model.decoder(x_batch.to(device)).float()
                     elif data_mode == "dataset":
                         x = x_batch.to(device)
+                    # x = x.repeat(250, 1, 1)
                     out = model(x, return_all=True, input_is_img=input_is_img)
                     losses = model.loss_function(*out, x_batch, n_kernels=n_kernels if not input_is_img else False)
                     loss = losses["loss"]
@@ -134,6 +135,7 @@ def train_model(n_kernels: int,
                     _gpu_info = nvmlDeviceGetMemoryInfo(_gpu_handle)
                     if torch.cuda.memory_reserved()/_gpu_info.total > 0.75 and torch.cuda.memory_allocated()/_gpu_info.total > 0.5:
                         current_loss.backward()  # Has to be computed on every few batches to prevent memory overruns
+                        optimizer.step()
                         current_loss = torch.tensor(0.0, device=device)
                         loss_present = False
                     # Update inner progress bar
@@ -142,7 +144,7 @@ def train_model(n_kernels: int,
                     batch += 1
             if loss_present:
                 current_loss.backward()
-            optimizer.step()
+                optimizer.step()
             # Update learning rate
             scheduler.step(epoch_loss)
 
