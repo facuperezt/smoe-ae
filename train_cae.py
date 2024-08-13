@@ -52,7 +52,7 @@ def train_model(n_kernels: int,
     nr_model_params = sum(p.numel() for p in model.parameters())
     start_time = str(datetime.now()).split(".")[0].replace(":", ";")
     model_name = "_".join([model_name, start_time])
-    model_path = f"models/facu/checkpoints/random_blocks/{model_name}"
+    model_path = f"models/facu/checkpoints/{data_mode}/{model_name}"
     if load_model:
         model.load_state_dict(torch.load(load_model))
     run = wandb.init(mode=wandb_mode,

@@ -215,7 +215,12 @@ class Img2Block(BlockImgBlock):
             return torch.stack([self.img_to_blocks(x[i]) for i in range(x.shape[0])])
         
     def forward_new(self, x: torch.Tensor) -> torch.Tensor:
-        return self.unfold_tensor(x, self.n_channels, self.block_size, self.block_size)
+        if x.ndim == 2:
+            x = x[None, None]
+        elif x.ndim == 3:
+            x = x[None]
+        out = self.unfold_tensor(x, self.n_channels, self.block_size, self.block_size)
+        return out
     
     def forward(self, x: torch.Tensor, use_old: bool = False) -> torch.Tensor:
         if use_old:

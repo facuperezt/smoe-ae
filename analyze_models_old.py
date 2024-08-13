@@ -9,7 +9,7 @@ from utils.visualize_kernels import plot_kernels, plot_kernel_centers
 
 from PIL import Image
 
-from models.facu import VAE, SimpleMLP, VAE_KernelsOutside, VAE_NegativeExperts, VAE_KernelsOutsideNegativeExperts
+from models.facu import SimpleMLP, VAE_KernelsOutside, VAE_NegativeExperts, VAE_KernelsOutsideNegativeExperts
 from models.elvira import Vanilla as AE
 
 def set_title(ax: plt.Axes, title: str) -> None:
@@ -34,10 +34,12 @@ block_size = 8
 img_size = 128
 
 def load_model(who: str) -> torch.nn.Module:
-    if who == "elvira":
+    if who == "elvira_small":
         model = AE(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=False, device=device, force_conv_layers=[16, 32, 64], force_dense_layers=[64])
-        path = "C:\\Users\\fq\\Facu\\clean-smoe\\models\\facu\\checkpoints\\elvira_small\\final.pth"
+        path = "C:\\Users\\fq\\Facu\\clean-smoe\\models\\facu\\checkpoints_bckup\\elvira_small\\final.pth"
         model.load_state_dict(torch.load(path))
+    elif who == "elvira":
+        model = AE(n_kernels=n_kernels, block_size=block_size, img_size=img_size, load_tf_model=True, device=device)
     elif who == "mlp":
         model = SimpleMLP(n_kernels=n_kernels, block_size=block_size, img_size=img_size, device=device, force_hidden_sizes=[4*block_size**2, 8*block_size**2, 4*block_size**2, block_size**2])
         path = "C:\\Users\\fq\\Facu\\clean-smoe\\models\\facu\\checkpoints\\mlp_big\\final.pth"
@@ -78,13 +80,16 @@ def visualize_output(model, blocked_output: torch.Tensor, cmap: str = 'gray', vm
         ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
 
 if __name__ == "__main__":
-    for model_name in ["vae_kernels_inside", "vae_kernels_outside", "vae_negative_experts", "vae_kernels_outside_negative_experts"]:
+    for model_name in ["elvira"]:  # ["vae_kernels_inside", "vae_kernels_outside", "vae_negative_experts", "vae_kernels_outside_negative_experts"]:
         model = load_model(model_name)
         os.makedirs(f"models/facu/kernel_pics/{model_name}/", exist_ok=True)
         model.eval()
         img = Image.open("data/professional_photos/train/ali-inay-2273.png").convert("L")
         img_arr = (torch.tensor(np.array(img), dtype=torch.float32, device=device, requires_grad=False)/255)
         img_arr = img_arr[None, :img_size, :img_size]
+        from fvcore.nn import FlopCountAnalysis, flop_count_table 
+        flop_analyzer = FlopCountAnalysis(model, img_arr.cuda())
+        print(flop_count_table(flop_analyzer))
         blocks = model.img2block(img_arr)
         emb = model.encoder(blocks)
         if model_name == "elvira_small":

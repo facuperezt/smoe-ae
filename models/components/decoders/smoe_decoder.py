@@ -16,11 +16,16 @@ class VanillaSMoE(torch.nn.Module):
 
     def forward(self, x: torch.Tensor, use_numpy: bool = False) -> np.ndarray:
         if use_numpy is False:
-            return self.torch_smoe(x)
+            if x.ndim == 2:
+                x = [x]
+            return torch.stack([self.torch_smoe(_x) for _x in x])
         else:
             print("Using np_smoe")
             return self.np_smoe(x.detach().numpy())
 
+    def cuda(self):
+        self.device = "cuda"
+        self.domain_init.to(self.device)
 
     def torch_smoe(self, arr):
         block_size = self.block_size

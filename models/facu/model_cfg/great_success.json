@@ -35,11 +35,11 @@
     },
     "dropout": {
         "conv": 0.0,
-        "lin": 0.5
+        "lin": 0.25
     },
     "order": {
         "conv": "lbadr",
-        "lin": "labdr"
+        "lin": "lbadr"
     },
     "activation": {
         "conv": "swish",
@@ -51,9 +51,9 @@
     "nr_epochs": 10000,
     "nr_batches": 50,
 
-    "batch_size": 1500,
-    "input_is_img": false,
-    "data_mode": "synthetic",
+    "batch_size": 6,
+    "input_is_img": true,
+    "data_mode": "dataset",
     "load_model": "models/facu/checkpoints/random_blocks/CAE_2024-06-17 20;22;43/final.pth",
     "load_model": "",
     "wandb_mode": "online"

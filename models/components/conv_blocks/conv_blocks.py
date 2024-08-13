@@ -132,7 +132,7 @@ class CustomLastLayerActivations(torch.nn.Module):
         for group_size, act in zip(self.group_sizes, self.group_activation):
             out.append(act(x[:, _base:_base + group_size]))
             _base += group_size
-        return torch.cat(out, dim=1)
+        return torch.cat(out, dim=0)
     
 class ShiftedSigmoid(torch.nn.Module):
     def __init__(self, shift: float = -1, scale: float = 2):

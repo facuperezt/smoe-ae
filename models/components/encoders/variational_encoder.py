@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 import torch
 from torch.nn.modules import Module
 
@@ -18,7 +18,7 @@ class VAE(torch.nn.Module):
                  in_channels: int = 1,
                  n_kernels: int = 4,
                  block_size: int = 16,
-                 hidden_dims: List = None,
+                 hidden_dims: Optional[List] = None,
                  conv_block: torch.nn.Module = ConvBlock,
                  **kwargs) -> None:
         super().__init__()
